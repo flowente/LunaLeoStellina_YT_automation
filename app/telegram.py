@@ -38,7 +38,7 @@ def send_video(url, caption, buttons=None):
     if buttons: p["reply_markup"] = {"inline_keyboard": buttons}
     res = call("sendVideo", **p)
     if not res or not res.get("ok"):          # se Telegram non riesce a scaricare il video, manda il link
-        send(caption + f'\n\n<a href="{url}">▶️ Guarda la bozza</a>', buttons)
+        send(caption + f'\n\n<a href="{url}">Guarda la bozza</a>', buttons)
     return res
 
 
@@ -64,23 +64,23 @@ def esc(s):
 
 def draft_report(out):
     v = out.get("verdict") or {}
-    lines = [f"🎬 <b>{out['episode']}</b> · bozza take {out['take']}",
+    lines = [f"<b>{out['episode']}</b> · bozza take {out['take']} pronta",
              f"Giudizio: <b>{esc(v.get('verdetto', 'non disponibile'))}</b>"]
     for s in v.get("shots", []):
         for p in s.get("problemi", []):
             lines.append(f"• {esc(s['id'])} {p.get('secondo', '')}s [{p.get('gravita')}] {esc(p.get('descrizione', ''))}")
-    if v.get("loop"): lines.append(f"🔁 Loop: {esc(v['loop'])}")
+    if v.get("loop"): lines.append(f"Loop: {esc(v['loop'])}")
     if v.get("trascurabili"): lines.append("Trascurabili: " + esc("; ".join(v["trascurabili"])))
-    if v.get("rifacimento"): lines.append(f"↩️ Rifacimento da {v['rifacimento']['da_secondo']}s: {esc(v['rifacimento']['istruzioni_prompt'])}")
-    for g in out.get("measures", {}).get("global", [])[:4]: lines.append("📏 " + esc(g))
+    if v.get("rifacimento"): lines.append(f"Rifacimento da {v['rifacimento']['da_secondo']}s: {esc(v['rifacimento']['istruzioni_prompt'])}")
+    for g in out.get("measures", {}).get("global", [])[:4]: lines.append("Misura: " + esc(g))
     return "\n".join(lines)
 
 
 def draft_buttons(ep, take):
     return [[{"text": "✅ Approva (1080p)", "callback_data": f"approve|{ep}|{take}"},
-             {"text": "🔁 Rifai bozza", "callback_data": f"draft|{ep}|0"}]]
+             {"text": "Rifai bozza", "callback_data": f"draft|{ep}|0"}]]
 
 
 def final_buttons(ep, take):
-    return [[{"text": "📅 Metti in coda su Buffer", "callback_data": f"schedule|{ep}|{take}"},
-             {"text": "⏸ Non ora", "callback_data": f"noop|{ep}|{take}"}]]
+    return [[{"text": "Metti in coda su Buffer", "callback_data": f"schedule|{ep}|{take}"},
+             {"text": "Non ora", "callback_data": f"noop|{ep}|{take}"}]]

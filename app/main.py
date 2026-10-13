@@ -46,16 +46,16 @@ def notify(event, payload):
                 if payload.get("preview_url"): telegram.send_video(payload["preview_url"], txt, telegram.draft_buttons(ep, take))
                 else: telegram.send(txt, telegram.draft_buttons(ep, take))
             elif event == "final_ready":
-                telegram.send(f"🎉 <b>{ep}</b> finale 1080p pronto (copia su Drive in corso).\n"
-                              f'<a href="{payload["final_url"]}">▶️ Finale</a> · <a href="{payload["cover_url"]}">🖼 Copertina</a>\n\n'
+                telegram.send(f"<b>{ep}</b> · finale 1080p pronto (copia su Drive in corso).\n"
+                              f'<a href="{payload["final_url"]}">Finale</a> · <a href="{payload["cover_url"]}">Copertina</a>\n\n'
                               f"<b>Titolo:</b> {telegram.esc(payload['title_it'])}\n<b>EN:</b> {telegram.esc(payload['title_en'])}",
                               telegram.final_buttons(ep, take))
             elif event == "scheduled":
-                telegram.send(f"📅 <b>{ep}</b> programmato su Buffer: {telegram.esc(payload['buffer'].get('dueAt') or 'in coda')}")
+                telegram.send(f"<b>{ep}</b> · programmato su Buffer: {telegram.esc(payload['buffer'].get('dueAt') or 'in coda')}")
             elif event == "error":
-                telegram.send(f"⚠️ Errore {payload.get('kind')} su <b>{ep}</b>: {telegram.esc(payload.get('error'))}")
+                telegram.send(f"⚠️ <b>{ep}</b> · errore in {payload.get('kind')}: {telegram.esc(payload.get('error'))}")
             elif event == "started":
-                telegram.send(f"⏳ {payload.get('kind')} avviato per <b>{ep}</b>…")
+                telegram.send(f"<b>{ep}</b> · {'bozza' if payload.get('kind')=='draft' else payload.get('kind')} avviata")
     except Exception as e:
         print("telegram:", e)
     if not config.N8N_WEBHOOK_URL: return
@@ -63,6 +63,14 @@ def notify(event, payload):
         requests.post(config.N8N_WEBHOOK_URL, json={"event": event, "channel": config.CHANNEL, **payload}, timeout=30)
     except Exception as e:
         print("webhook n8n non raggiunto:", e)
+
+
+def progress(ep, text):
+    """Aggiornamento breve su Telegram durante un lavoro."""
+    try:
+        if telegram.enabled(): telegram.send(f"<b>{ep}</b> · {telegram.esc(text)}")
+    except Exception as e:
+        print("telegram:", e)
 
 
 def run_job(kind, ep, fn, *args, **kw):
@@ -84,9 +92,11 @@ def kie_generate(ep, take, req, stem: Path, tipo, log, kind="draft", task=None):
     before = kie.credit()
     if not task:
         task = kie.create(req); log(f"Kie task {task}")
+        progress(ep, f"{tipo}: generazione avviata su Seedance (di solito 2-4 minuti)")
         st = state(ep); st.setdefault("pending", {})[kind] = {"task": task, "take": take}; save_state(ep, st)   # ripresa dopo un riavvio
     else:
         log(f"Ripresa del task Kie {task} dopo un riavvio")
+        progress(ep, f"{tipo}: riprendo la generazione interrotta dal riavvio del servizio")
     url, d = kie.wait(task, log=log)
     kie.download(url, stem.with_suffix(".mp4"))
     after = kie.credit()
@@ -106,7 +116,9 @@ def do_draft(ep, log, resume=None):
     stem.with_suffix(".request.json").write_text(json.dumps(req, ensure_ascii=False, indent=1), encoding="utf-8")
     task, raw = kie_generate(ep, take, req, stem, "bozza 480p", log, "draft", (resume or {}).get("task"))
     s = state(ep)
+    progress(ep, "video ricevuto: post-produzione (colori, loop, audio)")
     final = postprod.finalize(raw, E, episodes.channel()["post"]); log("post-produzione ok")
+    progress(ep, "controllo qualità in corso (misure e giudice)")
     rep = qc.analyze(raw, ep, ep_dir(ep) / "qc"); log(f"misure: {rep['esito']}")
     verdict = None
     try:
@@ -129,6 +141,7 @@ def do_approve(ep, take, log, resume=None):
     stem = ep_dir(ep) / "renders" / f"{ep}_take{take:02d}_1080p"
     task, raw = kie_generate(ep, take, kie.upgrade_request(t["draft_task"]), stem, "finale 1080p da bozza", log, "approve", (resume or {}).get("task"))
     s = state(ep); t = s["takes"][str(take)]
+    progress(ep, "1080p ricevuto: post-produzione e copertina")
     final = postprod.finalize(raw, E, episodes.channel()["post"]); log("finale 1080p ok")
     cover = postprod.frame(final, float(E.get("cover_s", 1.0)), stem.with_name(f"{ep}_copertina_1080x1920.png"))
     up = lambda p: storage.upload(p, f"{config.SUPABASE_VIDEO_PREFIX}/{config.CHANNEL}/{ep}/{p.name}")
@@ -232,6 +245,24 @@ def _tg_startup():
         try: print("telegram webhook:", telegram.set_webhook(), flush=True)
         except Exception as e: print("telegram webhook non impostato:", e, flush=True)
     threading.Thread(target=reg, daemon=True).start()   # mai bloccare l'avvio del servizio
+    # stato al riavvio: lavori ripresi e bozze interrotte prima che il servizio sapesse riprenderle
+    resumed, lost = [], []
+    for d in (config.DATA / config.CHANNEL / "episodes").glob("*"):
+        st = state(d.name)
+        if st.get("pending"): resumed.append(d.name)
+        for rq in (d / "renders").glob("*_take??.request.json"):
+            take = rq.name.split("_take")[1][:2]
+            flag = rq.with_name(rq.name.replace(".request.json", ".interrotta"))
+            if str(int(take)) not in st["takes"] and not st.get("pending") and not flag.exists():
+                lost.append(f"{d.name} take {int(take)}"); flag.write_text("segnalata")
+    lines = ["Servizio avviato."]
+    lines.append("Riprendo: " + ", ".join(resumed) if resumed else "Nessun lavoro in corso.")
+    if lost: lines.append("Interrotte dal riavvio, da rilanciare: " + ", ".join(lost) + " (usa /bozza).")
+    lines.append("Comandi: /episodi · /bozza EP0xx · /stato EP0xx · /programma EP0xx 20/10 17:30 · /costi")
+    try:
+        if telegram.enabled(): threading.Thread(target=telegram.send, args=("\n".join(lines),), daemon=True).start()
+    except Exception as e:
+        print("telegram:", e)
     # riprende le generazioni interrotte da un riavvio (il task su Kie continua anche se il servizio si ferma)
     for f in (config.DATA / config.CHANNEL / "episodes").glob("*/state.json"):
         try:
