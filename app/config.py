@@ -29,7 +29,8 @@ OPENAI_PRICE_OUT = float(env("OPENAI_PRICE_OUT_PER_M", "0") or 0)
 SUPABASE_URL = env("SUPABASE_URL", "https://nerfwrxouzqrabtjszbp.supabase.co")
 SUPABASE_KEY = env("SUPABASE_SERVICE_KEY", "")
 SUPABASE_REFS_BUCKET = env("SUPABASE_REFS_BUCKET", "youtube_short")       # tavole personaggi e mondi (già esistente)
-SUPABASE_VIDEO_BUCKET = env("SUPABASE_VIDEO_BUCKET", "yt_videos")         # bucket PUBBLICO per i video da programmare
+SUPABASE_VIDEO_BUCKET = env("SUPABASE_VIDEO_BUCKET", "youtube_short")     # bucket PUBBLICO (lo stesso delle tavole)
+SUPABASE_VIDEO_PREFIX = env("SUPABASE_VIDEO_PREFIX", "video")              # cartella dei video nel bucket
 
 # Buffer
 BUFFER_API_KEY = env("BUFFER_API_KEY", "")

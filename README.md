@@ -56,7 +56,7 @@ Ogni chiamata richiede l'header `X-Token: <SERVICE_TOKEN>`.
 1. Crea un nuovo progetto e scegli **Deploy from GitHub repo**, poi questo repository.
 2. Aggiungi un **Volume** montato su `/data`. Lì vengono salvati video, stato degli episodi e registro costi.
 3. Nelle **Variables** inserisci i nomi elencati in `.env.example`, con i valori. Le chiavi non vanno mai nel repository.
-4. Su Supabase crea un bucket **pubblico** chiamato `yt_videos`.
+4. Supabase: i video vanno nella cartella `video/` del bucket pubblico `youtube_short`.
 5. Apri `https://<servizio>.up.railway.app/health` e controlla che tutte le chiavi risultino `true`.
 
 ## Note

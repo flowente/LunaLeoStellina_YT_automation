@@ -89,7 +89,7 @@ def do_draft(ep, log):
         log(f"giudice: {verdict['verdetto']}")
     except Exception as e:
         log(f"giudice non eseguito: {e}")
-    preview = storage.upload(final, f"{config.CHANNEL}/{ep}/{final.name}") if config.SUPABASE_KEY else None
+    preview = storage.upload(final, f"{config.SUPABASE_VIDEO_PREFIX}/{config.CHANNEL}/{ep}/{final.name}") if config.SUPABASE_KEY else None
     s["takes"][str(take)] = {"draft_task": task, "raw": raw.name, "final": final.name, "qc": rep, "verdict": verdict, "preview_url": preview}
     save_state(ep, s)
     out = {"episode": ep, "take": take, "preview_url": preview, "verdict": verdict, "measures": {"esito": rep["esito"], "global": rep["global_issues"]}}
@@ -103,7 +103,7 @@ def do_approve(ep, take, log):
     task, raw = kie_generate(ep, take, kie.upgrade_request(t["draft_task"]), stem, "finale 1080p da bozza", log)
     final = postprod.finalize(raw, E, episodes.channel()["post"]); log("finale 1080p ok")
     cover = postprod.frame(final, float(E.get("cover_s", 1.0)), stem.with_name(f"{ep}_copertina_1080x1920.png"))
-    up = lambda p: storage.upload(p, f"{config.CHANNEL}/{ep}/{p.name}")
+    up = lambda p: storage.upload(p, f"{config.SUPABASE_VIDEO_PREFIX}/{config.CHANNEL}/{ep}/{p.name}")
     t.update(final_1080=final.name, final_url=up(final), cover_url=up(cover), approved=datetime.datetime.now().isoformat(timespec="seconds"))
     save_state(ep, s)
     out = {"episode": ep, "take": take, "final_url": t["final_url"], "cover_url": t["cover_url"], "file_name": final.name, **episodes.texts(ep)}
@@ -162,7 +162,7 @@ def schedule(ep: str, take: int, due_at: str | None = None, mode: str | None = N
 @app.post("/episodes/{ep}/cleanup")
 def cleanup(ep: str, x_token: str = Header(None)):
     auth(x_token); s = state(ep)
-    paths = [f"{config.CHANNEL}/{ep}/{v[k].rsplit('/', 1)[-1]}" for v in s["takes"].values() for k in ("preview_url", "final_url", "cover_url") if v.get(k)]
+    paths = [f"{config.SUPABASE_VIDEO_PREFIX}/{config.CHANNEL}/{ep}/{v[k].rsplit('/', 1)[-1]}" for v in s["takes"].values() for k in ("preview_url", "final_url", "cover_url") if v.get(k)]
     return storage.delete(paths) if paths else {"deleted": []}
 
 
