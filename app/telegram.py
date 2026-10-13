@@ -4,6 +4,7 @@ Comandi (solo dalla chat TELEGRAM_CHAT_ID):
   /bozza EP027      genera la bozza (con controllo)
   /stato EP027      stato dell'episodio
   /episodi          elenco episodi definiti
+  /programma EP026 20/10 17:30   programma su Buffer (oppure: coda)
   /costi            totale spese registrate
   /id               mostra il tuo chat id (funziona sempre: serve per la configurazione)
 """

@@ -270,6 +270,25 @@ async def telegram_webhook(request: Request, x_telegram_bot_api_secret_token: st
             telegram.send(f"<b>{arg}</b>: {len(st['takes'])} take\n" + "\n".join(
                 f"take {k}: {(v.get('verdict') or {}).get('verdetto', '-')}{' · finale pronto' if v.get('final_url') else ''}"
                 f"{' · programmato' if v.get('buffer_post') else ''}" for k, v in st["takes"].items()))
+        elif cmd in ("/programma", "/pianifica") and arg:
+            # /programma EP026 20/10 17:30   oppure   /programma EP026 2026-10-20 17:30   oppure   /programma EP026 coda
+            st = state(arg); ready = [k for k, v in st["takes"].items() if v.get("final_url")]
+            if not ready: raise RuntimeError(f"{arg} non ha ancora un finale approvato")
+            take = int(ready[-1]); rest = parts[2:]
+            if not rest or rest[0].lower() == "coda":
+                run_job("schedule", arg, do_schedule, arg, take, None, None)
+            else:
+                d = rest[0]; hm = rest[1] if len(rest) > 1 else "17:30"
+                now = datetime.datetime.now()
+                if "/" in d:
+                    dd, mm = d.split("/")[:2]; y = now.year
+                    dt = datetime.datetime(y, int(mm), int(dd), *map(int, hm.split(":")))
+                    if dt < now: dt = dt.replace(year=y + 1)
+                else:
+                    dt = datetime.datetime.fromisoformat(f"{d}T{hm}")
+                from zoneinfo import ZoneInfo
+                due = dt.replace(tzinfo=ZoneInfo("Europe/Rome")).isoformat()
+                run_job("schedule", arg, do_schedule, arg, take, due, "customScheduled")
         elif cmd == "/episodi":
             _, eps = episodes.all_episodes()
             telegram.send("\n".join(f"{k} · {v['title']} ({v['duration']}s) · take {len(state(k)['takes'])}" for k, v in sorted(eps.items())))
@@ -277,7 +296,7 @@ async def telegram_webhook(request: Request, x_telegram_bot_api_secret_token: st
             rows = costs.rows(); tot = sum(float(r.get("costo_usd") or 0) for r in rows)
             telegram.send(f"Spese registrate sul servizio: <b>${tot:.2f}</b> ({len(rows)} voci)")
         else:
-            telegram.send("Comandi: /bozza EP027 · /stato EP027 · /episodi · /costi · /id")
+            telegram.send("Comandi:\n/episodi — elenco episodi\n/bozza EP027 — genera la bozza\n/stato EP027 — stato\n/programma EP026 20/10 17:30 — programma su Buffer (ora italiana)\n/programma EP026 coda — mette in coda Buffer\n/costi — spese\n/id — chat id")
     except Exception as e:
         telegram.send(f"⚠️ {telegram.esc(e)}")
     return {"ok": True}
