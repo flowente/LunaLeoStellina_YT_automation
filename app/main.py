@@ -65,13 +65,13 @@ def notify(event, payload):
         print("webhook n8n non raggiunto:", e)
 
 
-def run_job(kind, ep, fn, *args):
+def run_job(kind, ep, fn, *args, **kw):
     jid = uuid.uuid4().hex[:12]
     JOBS[jid] = {"id": jid, "kind": kind, "episode": ep, "status": "running", "log": [], "started": datetime.datetime.now().isoformat(timespec="seconds")}
     def log(msg): JOBS[jid]["log"].append(msg); print(f"[{jid}] {msg}")
     def target():
         try:
-            JOBS[jid]["result"] = fn(*args, log=log); JOBS[jid]["status"] = "done"
+            JOBS[jid]["result"] = fn(*args, log=log, **kw); JOBS[jid]["status"] = "done"
         except Exception as e:
             JOBS[jid].update(status="error", error=str(e)); log(traceback.format_exc())
             notify("error", {"episode": ep, "job": jid, "kind": kind, "error": str(e)})
@@ -80,9 +80,13 @@ def run_job(kind, ep, fn, *args):
     return JOBS[jid]
 
 
-def kie_generate(ep, take, req, stem: Path, tipo, log):
+def kie_generate(ep, take, req, stem: Path, tipo, log, kind="draft", task=None):
     before = kie.credit()
-    task = kie.create(req); log(f"Kie task {task}")
+    if not task:
+        task = kie.create(req); log(f"Kie task {task}")
+        st = state(ep); st.setdefault("pending", {})[kind] = {"task": task, "take": take}; save_state(ep, st)   # ripresa dopo un riavvio
+    else:
+        log(f"Ripresa del task Kie {task} dopo un riavvio")
     url, d = kie.wait(task, log=log)
     kie.download(url, stem.with_suffix(".mp4"))
     after = kie.credit()
@@ -90,16 +94,18 @@ def kie_generate(ep, take, req, stem: Path, tipo, log):
     costs.record(episodio=ep, take=take, tipo=tipo, servizio="kie", modello=req["model"], risoluzione=i.get("resolution"),
                  durata_s=i.get("duration", ""), crediti=d.get("creditsConsumed") or (before - after if before and after else ""),
                  esito="ok", task_id=task, file=stem.with_suffix(".mp4").name, credito_residuo=after)
+    st = state(ep); st.get("pending", {}).pop(kind, None); save_state(ep, st)
     return task, stem.with_suffix(".mp4")
 
 
 # ------------------------------------------------------------------ fasi
-def do_draft(ep, log):
+def do_draft(ep, log, resume=None):
     E, req = episodes.request_for(ep, draft=True)
-    s = state(ep); take = len(s["takes"]) + 1
+    s = state(ep); take = resume["take"] if resume else len(s["takes"]) + 1
     stem = ep_dir(ep) / "renders" / f"{ep}_take{take:02d}"
     stem.with_suffix(".request.json").write_text(json.dumps(req, ensure_ascii=False, indent=1), encoding="utf-8")
-    task, raw = kie_generate(ep, take, req, stem, "bozza 480p", log)
+    task, raw = kie_generate(ep, take, req, stem, "bozza 480p", log, "draft", (resume or {}).get("task"))
+    s = state(ep)
     final = postprod.finalize(raw, E, episodes.channel()["post"]); log("post-produzione ok")
     rep = qc.analyze(raw, ep, ep_dir(ep) / "qc"); log(f"misure: {rep['esito']}")
     verdict = None
@@ -118,10 +124,11 @@ def do_draft(ep, log):
     return out
 
 
-def do_approve(ep, take, log):
+def do_approve(ep, take, log, resume=None):
     E, _ = episodes.request_for(ep, draft=True); s = state(ep); t = s["takes"][str(take)]
     stem = ep_dir(ep) / "renders" / f"{ep}_take{take:02d}_1080p"
-    task, raw = kie_generate(ep, take, kie.upgrade_request(t["draft_task"]), stem, "finale 1080p da bozza", log)
+    task, raw = kie_generate(ep, take, kie.upgrade_request(t["draft_task"]), stem, "finale 1080p da bozza", log, "approve", (resume or {}).get("task"))
+    s = state(ep); t = s["takes"][str(take)]
     final = postprod.finalize(raw, E, episodes.channel()["post"]); log("finale 1080p ok")
     cover = postprod.frame(final, float(E.get("cover_s", 1.0)), stem.with_name(f"{ep}_copertina_1080x1920.png"))
     up = lambda p: storage.upload(p, f"{config.SUPABASE_VIDEO_PREFIX}/{config.CHANNEL}/{ep}/{p.name}")
@@ -225,6 +232,15 @@ def _tg_startup():
         try: print("telegram webhook:", telegram.set_webhook(), flush=True)
         except Exception as e: print("telegram webhook non impostato:", e, flush=True)
     threading.Thread(target=reg, daemon=True).start()   # mai bloccare l'avvio del servizio
+    # riprende le generazioni interrotte da un riavvio (il task su Kie continua anche se il servizio si ferma)
+    for f in (config.DATA / config.CHANNEL / "episodes").glob("*/state.json"):
+        try:
+            st = json.loads(f.read_text(encoding="utf-8")); ep = st.get("episode") or f.parent.name
+            for kind, p in (st.get("pending") or {}).items():
+                if kind == "draft": run_job("draft", ep, do_draft, ep, resume=p)
+                elif kind == "approve": run_job("approve", ep, do_approve, ep, p["take"], resume=p)
+        except Exception as e:
+            print("ripresa non riuscita:", f, e)
 
 
 @app.get("/telegram/status")
