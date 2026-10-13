@@ -1,6 +1,8 @@
 # Luna, Leo e Stellina: automazione YouTube Shorts
 
+
 Servizio che produce gli short del canale [Luna, Leo e Stellina](https://www.youtube.com/@LunaLeoStellina): genera la bozza, la controlla, ti chiede l'approvazione, crea il finale e lo programma su Buffer.
+Pipeline automatica: Seedance su Kie, controllo qualità con misure e giudice OpenAI, finale 1080p, programmazione con Buffer.
 
 ## Flusso
 
