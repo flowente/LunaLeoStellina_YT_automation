@@ -3,10 +3,18 @@ import os
 from pathlib import Path
 
 def env(name, default=None, required=False):
-    v = os.environ.get(name, default)
+    v = os.environ.get(name)
+    if v is not None:
+        v = v.split(" #")[0].split("\t#")[0].strip().strip("`'\"")    # toglie commenti incollati per errore, spazi e virgolette
+        if v.startswith("#"): v = ""
+    if not v: v = default
     if required and not v:
         raise RuntimeError(f"Variabile d'ambiente mancante: {name}")
     return v
+
+def _num(v):
+    try: return float(str(v).replace(",", "."))
+    except (TypeError, ValueError): return 0.0
 
 # Sicurezza del servizio: ogni chiamata deve avere l'header  X-Token: <SERVICE_TOKEN>
 SERVICE_TOKEN = env("SERVICE_TOKEN", "")
@@ -22,8 +30,8 @@ KIE_CREDIT_USD = 0.005
 # OpenAI (giudice visivo)
 OPENAI_API_KEY = env("OPENAI_API_KEY", "")
 OPENAI_MODEL = env("OPENAI_VISION_MODEL", "gpt-6-astra")
-OPENAI_PRICE_IN = float(env("OPENAI_PRICE_IN_PER_M", "0") or 0)    # $ per 1M token in ingresso (per il registro costi)
-OPENAI_PRICE_OUT = float(env("OPENAI_PRICE_OUT_PER_M", "0") or 0)
+OPENAI_PRICE_IN = _num(env("OPENAI_PRICE_IN_PER_M", "0"))    # $ per 1M token in ingresso (per il registro costi)
+OPENAI_PRICE_OUT = _num(env("OPENAI_PRICE_OUT_PER_M", "0"))
 
 # Supabase Storage (link pubblici per Buffer e per n8n)
 SUPABASE_URL = env("SUPABASE_URL", "https://nerfwrxouzqrabtjszbp.supabase.co")

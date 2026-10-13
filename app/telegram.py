@@ -10,8 +10,8 @@ Comandi (solo dalla chat TELEGRAM_CHAT_ID):
 import json, os, requests
 from . import config
 
-TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip().strip("`'\"")
-CHAT = os.environ.get("TELEGRAM_CHAT_ID", "").strip()
+TOKEN = config.env("TELEGRAM_BOT_TOKEN", "")
+CHAT = config.env("TELEGRAM_CHAT_ID", "")
 API = lambda m: f"https://api.telegram.org/bot{TOKEN}/{m}"
 
 
