@@ -62,3 +62,23 @@ def write(idea: str, feedback: str = ""):
     usage = j.get("usage", {})
     cost = (usage.get("input_tokens", 0) * config.OPENAI_PRICE_IN + usage.get("output_tokens", 0) * config.OPENAI_PRICE_OUT) / 1e6
     return spec, usage, round(cost, 4)
+
+
+def revise(spec: dict, change: str):
+    """Applica una correzione di Simone a un episodio esistente, lasciando invariato tutto il resto."""
+    if not config.OPENAI_API_KEY: raise RuntimeError("OPENAI_API_KEY non impostata")
+    base = {f: spec[f] for f in SCHEMA["properties"] if f in spec}
+    base.setdefault("riassunto_it", "")
+    prompt = (RULES + "\n\nEPISODIO ATTUALE (JSON):\n" + json.dumps(base, ensure_ascii=False) +
+              f"\n\nCORREZIONE DI SIMONE: {change}\n\nRiscrivi l'episodio applicando SOLO questa correzione: modifica le azioni, le regole e "
+              "i testi coinvolti in modo preciso ed esplicito per Seedance; lascia identico tutto il resto (durata, mondo, inquadratura, titoli se non toccati). "
+              "In riassunto_it scrivi in 2-3 righe cosa hai cambiato.")
+    body = {"model": config.OPENAI_MODEL, "input": [{"role": "user", "content": prompt}],
+            "text": {"format": {"type": "json_schema", "name": "episodio", "schema": SCHEMA, "strict": True}}}
+    r = requests.post("https://api.openai.com/v1/responses", headers={"Authorization": f"Bearer {config.OPENAI_API_KEY}"},
+                      json=body, timeout=180)
+    r.raise_for_status(); j = r.json()
+    text = j.get("output_text") or "".join(c.get("text", "") for o in j.get("output", []) for c in o.get("content", []) if c.get("type") == "output_text")
+    usage = j.get("usage", {})
+    cost = (usage.get("input_tokens", 0) * config.OPENAI_PRICE_IN + usage.get("output_tokens", 0) * config.OPENAI_PRICE_OUT) / 1e6
+    return json.loads(text), usage, round(cost, 4)

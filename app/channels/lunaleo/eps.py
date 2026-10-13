@@ -255,24 +255,24 @@ EPISODES = {
  ),
  "EP027": dict(
   title="Pozzanghere colorate!", slug="pozzanghere_colorate", duration=12, cast=["luna", "leo", "stellina"], world="mars_B",
-  goal="Colori rosso, blu, giallo (playlist colori). Interattivo: in quale pozzanghera salta? La tuta si colora e alla fine torna pulita (loop).",
+  goal="Colori rosso, blu, giallo (playlist colori). Interattivo: in quale pozzanghera salta? Le gambe della tuta si colorano interamente del colore della pozzanghera e alla fine tornano bianche (loop).",
   framing=("FRAMING: medium shot, the SAME framing from the very first frame to the last (no zoom, no push-in). Luna stands on the LEFT and "
            "Leo on the RIGHT, side by side in the center; their full bodies fill about 40% of the frame height, feet at about 18% from the bottom "
            "edge. In front of them on the sand lie three big round shallow puddles of thick, opaque, glossy paint in solid bright colors, in a row: RED on the left, BLUE on the "
            "right, YELLOW in the middle. STELLINA floats in the middle, just above their helmets."),
   action=[
    "0-1s: Luna and Leo, in perfectly clean white suits, already bounce on the spot looking at the three bright puddles; STELLINA glows above them.",
-   "1-4s: Luna does a big happy jump INTO the RED puddle: a soft splash sprinkles her boots and legs with round, solid, opaque RED paint dots with clean edges; she giggles and hops back to her spot.",
-   "4-7s: Leo does a big happy jump INTO the BLUE puddle: a soft splash sprinkles his boots and legs with round, solid, opaque BLUE paint dots with clean edges; he wiggles happily and hops back to his spot.",
-   "7-10s: Luna and Leo hold hands and jump TOGETHER into the YELLOW puddle in the middle: a big soft splash adds round, solid, opaque YELLOW dots to both suits; they laugh and hop back to their spots.",
-   "10-12s: STELLINA does one gentle spin and a shower of sparkles falls on the children: all the paint dots disappear and their suits are perfectly clean white again, exactly as at the very beginning, both bouncing on the spot looking at the puddles.",
+   "1-4s: Luna does a big happy jump INTO the RED puddle: with a soft splash, both legs of her suit, from the boots up to the hips, instantly turn completely solid opaque RED (a clean, even color, like painted plastic); she giggles and hops back to her spot.",
+   "4-7s: Leo does a big happy jump INTO the BLUE puddle: with a soft splash, both legs of his suit, from the boots up to the hips, instantly turn completely solid opaque BLUE (a clean, even color); he wiggles happily and hops back to his spot.",
+   "7-10s: Luna and Leo hold hands and jump TOGETHER into the YELLOW puddle in the middle: with a big soft splash the legs of BOTH suits, from the boots up to the hips, turn completely solid opaque YELLOW; they laugh and hop back to their spots.",
+   "10-12s: STELLINA does one gentle spin and a shower of sparkles falls on the children: all the color disappears and their suits are perfectly clean white again, exactly as at the very beginning, both bouncing on the spot looking at the puddles.",
   ],
-  rules="RULES: always exactly three characters: Luna, Leo and STELLINA, only ONE STELLINA; STELLINA never changes color and never has arms. Exactly three puddles that never move and never change color: red, blue, yellow. Luna jumps ONLY into the red puddle, Leo ONLY into the blue puddle, both together into the yellow one. The paint makes only small round colored dots on boots and legs, never on faces or helmets; the suits are clean at the start and clean again at the end. Gentle, joyful, never messy or dirty-looking. ",
+  rules="RULES: always exactly three characters: Luna, Leo and STELLINA, only ONE STELLINA; STELLINA never changes color and never has arms. Exactly three puddles that never move and never change color: red, blue, yellow. Luna jumps ONLY into the red puddle, Leo ONLY into the blue puddle, both together into the yellow one. The color covers ONLY the legs of the suit, from the boots up to the hips, as one even solid color matching the puddle; never the torso, arms, faces or helmets. The suits are clean white at the start and clean white again at the end. Gentle, joyful, never messy or dirty-looking. ",
   audio="AUDIO: an original bouncy marimba and ukulele melody, 104 bpm; a soft 'splash' and a bright note for each puddle (different for red, blue and yellow), children's giggles, a sparkly shimmer when STELLINA cleans the suits; the music ends on the same note and phrase it starts with, so the video loops seamlessly.",
   title_it="Pozzanghere colorate! 🔴🔵🟡 Salta con Luna e Leo ⭐ | Colori per bambini #shorts",
   title_en="Colorful Puddles! 🔴🔵🟡 Jump with Luna and Leo ⭐ | Colors for Toddlers #shorts",
-  desc_it="Splash! Luna salta nella pozzanghera rossa, Leo in quella blu e insieme in quella gialla: le tute si riempiono di puntini colorati… e Stellina le fa tornare bianche! 🔴🔵🟡 ⭐",
-  desc_en="Splash! Luna jumps into the red puddle, Leo into the blue one and together into the yellow one: their suits get colorful dots… and Stella makes them white again! 🔴🔵🟡 ⭐",
+  desc_it="Splash! Luna salta nella pozzanghera rossa, Leo in quella blu e insieme in quella gialla: le gambe delle tute diventano rosse, blu e gialle… e Stellina le fa tornare bianche! 🔴🔵🟡 ⭐",
+  desc_en="Splash! Luna jumps into the red puddle, Leo into the blue one and together into the yellow one: their suit legs turn red, blue and yellow… and Stella makes them white again! 🔴🔵🟡 ⭐",
   cover_s=8.5,
  ),
  "EP028": dict(
