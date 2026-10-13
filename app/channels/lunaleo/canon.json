@@ -1,0 +1,54 @@
+{
+ "_nota": "Canone ricavato il 13/10/2026 misurando i video approvati (bozze 480p). Altezza = altezza del bambino (casco compreso) in % dell'altezza del fotogramma, nel fotogramma chiave. Piedi = distanza dei piedi dal bordo basso in %. Da confermare/ritoccare con Simone.",
+ "composizione": {
+  "1": {
+   "nome": "solo, primo piano",
+   "altezza_pct": [
+    45,
+    68
+   ],
+   "piedi_pct": [
+    5,
+    18
+   ],
+   "misurato_su": "EP004 47%, EP005 59%, EP008 63%, EP011 56%"
+  },
+  "2": {
+   "nome": "coppia affiancata",
+   "altezza_pct": [
+    32,
+    50
+   ],
+   "piedi_pct": [
+    12,
+    30
+   ],
+   "misurato_su": "EP002 42%, EP006 42%, EP007t4 37%, EP010 48%, EP025 33%; scartata EP007t2 30%; tollerata EP003t4 26%"
+  }
+ },
+ "stellina_larghezza_pct": [
+  18,
+  44
+ ],
+ "gialli_max": 2,
+ "loop_min": 0.6,
+ "camera_ferma": {
+  "zoom_max": 0.06,
+  "deriva_max": 0.15
+ },
+ "tolleranze": {
+  "_nota": "Deciso da Simone il 13/10/2026 su EP026 take01",
+  "trascurabili_nessun_rifacimento": [
+   "effetti di luce/particelle che tingono o velano per un attimo i personaggi (< 1 s)",
+   "oggetti che passano brevemente davanti a Stellina",
+   "piccole trasparenze o riflessi durante uno scoppio/effetto (< 1 s)",
+   "lievi differenze di dimensione/posizione dentro o vicino al canone"
+  ],
+  "da_correggere_sempre": [
+   "loop: primo e ultimo fotogramma devono corrispondere (si corregge prima con il taglio automatico in post, gratis)",
+   "identità diversa dagli sheet",
+   "azione sbagliata rispetto alla sceneggiatura",
+   "duplicazioni, deformazioni evidenti, testo generato"
+  ]
+ }
+}
