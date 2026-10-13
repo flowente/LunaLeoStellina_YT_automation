@@ -248,6 +248,70 @@ EPISODES = {
   desc_en="Catch the bubble! Stella sends colorful bubbles down from the sky of Mars: Luna catches the red one, Leo the blue one and together they catch the yellow one! What color comes next? 🔴🔵🟡 ⭐",
   cover_s=8.4,
  ),
+ "EP027": dict(
+  title="Pozzanghere colorate!", slug="pozzanghere_colorate", duration=12, cast=["luna", "leo", "stellina"], world="mars_B",
+  goal="Colori rosso, blu, giallo (playlist colori). Interattivo: in quale pozzanghera salta? La tuta si colora e alla fine torna pulita (loop).",
+  framing=("FRAMING: medium shot, the SAME framing from the very first frame to the last (no zoom, no push-in). Luna stands on the LEFT and "
+           "Leo on the RIGHT, side by side in the center; their full bodies fill about 40% of the frame height, feet at about 18% from the bottom "
+           "edge. In front of them on the sand lie three big round shallow puddles of bright colored water in a row: RED on the left, BLUE on the "
+           "right, YELLOW in the middle. STELLINA floats in the middle, just above their helmets."),
+  action=[
+   "0-1s: Luna and Leo, in perfectly clean white suits, already bounce on the spot looking at the three bright puddles; STELLINA glows above them.",
+   "1-4s: Luna does a big happy jump INTO the RED puddle: a soft splash of red drops sprinkles her boots and legs with round red paint dots; she giggles and hops back to her spot.",
+   "4-7s: Leo does a big happy jump INTO the BLUE puddle: a soft splash of blue drops sprinkles his boots and legs with round blue paint dots; he wiggles happily and hops back to his spot.",
+   "7-10s: Luna and Leo hold hands and jump TOGETHER into the YELLOW puddle in the middle: a big soft yellow splash adds round yellow dots to both suits; they laugh and hop back to their spots.",
+   "10-12s: STELLINA does one gentle spin and a shower of sparkles falls on the children: all the paint dots disappear and their suits are perfectly clean white again, exactly as at the very beginning, both bouncing on the spot looking at the puddles.",
+  ],
+  rules="RULES: always exactly three characters: Luna, Leo and STELLINA, only ONE STELLINA; STELLINA never changes color and never has arms. Exactly three puddles that never move and never change color: red, blue, yellow. Luna jumps ONLY into the red puddle, Leo ONLY into the blue puddle, both together into the yellow one. The paint makes only small round colored dots on boots and legs, never on faces or helmets; the suits are clean at the start and clean again at the end. Gentle, joyful, never messy or dirty-looking. ",
+  audio="AUDIO: an original bouncy marimba and ukulele melody, 104 bpm; a soft 'splash' and a bright note for each puddle (different for red, blue and yellow), children's giggles, a sparkly shimmer when STELLINA cleans the suits; the music ends on the same note and phrase it starts with, so the video loops seamlessly.",
+  title_it="Pozzanghere colorate! 🔴🔵🟡 Salta con Luna e Leo ⭐ | Colori per bambini #shorts",
+  title_en="Colorful Puddles! 🔴🔵🟡 Jump with Luna and Leo ⭐ | Colors for Toddlers #shorts",
+  desc_it="Splash! Luna salta nella pozzanghera rossa, Leo in quella blu e insieme in quella gialla: le tute si riempiono di puntini colorati… e Stellina le fa tornare bianche! 🔴🔵🟡 ⭐",
+  desc_en="Splash! Luna jumps into the red puddle, Leo into the blue one and together into the yellow one: their suits get colorful dots… and Stella makes them white again! 🔴🔵🟡 ⭐",
+  cover_s=8.5,
+ ),
+ "EP028": dict(
+  title="Nuvolette di zucchero filato", slug="nuvolette_zucchero_filato", duration=12, cast=["luna", "leo", "stellina"], world="mars_A",
+  goal="Mescolare i colori con nuvolette soffici (seguito del format bolle di EP010/EP026): rosa + blu = viola, giallo + blu = verde.",
+  framing=("FRAMING: medium shot, the SAME framing from the very first frame to the last (no zoom, no push-in). Luna stands on the LEFT and "
+           "Leo on the RIGHT, facing each other a little, near the center; their full bodies fill about 40% of the frame height, feet at about "
+           "18% from the bottom edge. STELLINA floats between and just above their helmets. The fluffy clouds are held in front of their chests."),
+  action=[
+   "0-1s: Luna and Leo already stand in their spots; STELLINA sparkles and a BIG soft fluffy PINK cotton-candy cloud appears in Luna's hands and a BIG fluffy BLUE cotton-candy cloud in Leo's hands, each as big as a beach ball.",
+   "1-5s: Luna and Leo step towards each other and gently squish the two clouds together: PINK and BLUE melt into ONE big fluffy PURPLE cloud; they open their mouths in a big surprised 'ooh!'; the purple cloud floats up and stays above Luna's head on the left.",
+   "5-9s: with a sparkle from STELLINA, a new fluffy YELLOW cloud appears in Luna's hands and a new fluffy BLUE cloud in Leo's hands; they squish them together and they melt into ONE big fluffy GREEN cloud; Leo giggles; the green cloud floats up and stays above Leo's head on the right.",
+   "9-12s: the PURPLE and GREEN clouds float gently in the sky; Luna and Leo step back to their starting spots, and with a sparkle a new fluffy PINK cloud appears in Luna's hands and a new fluffy BLUE cloud in Leo's hands, exactly as at the very beginning.",
+  ],
+  rules="RULES: always exactly three characters: Luna, Leo and STELLINA, only ONE STELLINA; STELLINA never splits, never changes color and never has arms. The clouds are soft fluffy cotton-candy textured spheres with no faces, they are not eaten and never touch the faces. Each mix uses exactly TWO clouds that become exactly ONE cloud of the new color; a cloud never changes color by itself. Luna always holds the cloud on the LEFT and Leo the cloud on the RIGHT. ",
+  audio="AUDIO: an original soft dreamy glockenspiel and harp melody, 96 bpm; a fluffy 'poof' when clouds appear, a soft squishy sound and a rising glissando when two colors melt into one, children's 'ooh!' and giggles; the music ends on the same note and phrase it starts with, so the video loops seamlessly.",
+  title_it="Nuvolette colorate! 🍬 Rosa e blu fa viola? Colori con Stellina ⭐ | Colori per bambini #shorts",
+  title_en="Fluffy Color Clouds! 🍬 Pink and Blue Make Purple? Colors with Stella ⭐ | Colors for Toddlers #shorts",
+  desc_it="Luna e Leo uniscono nuvolette soffici di zucchero filato: rosa e blu fanno il viola, giallo e blu fanno il verde! Che colore viene? 🍬 ⭐",
+  desc_en="Luna and Leo squish fluffy cotton-candy clouds together: pink and blue make purple, yellow and blue make green! What color comes next? 🍬 ⭐",
+  cover_s=3.5,
+ ),
+ "EP029": dict(
+  title="Gocce di tempera", slug="gocce_di_tempera", duration=12, cast=["luna", "leo", "stellina"], world="mars_B",
+  goal="Colori che si combinano ed esplodono: gocce di tempera su un grande sasso bianco; rosso + giallo = arancione, giallo + blu = verde.",
+  framing=("FRAMING: medium shot, the SAME framing from the very first frame to the last (no zoom, no push-in). Luna stands on the LEFT and "
+           "Leo on the RIGHT, their full bodies fill about 40% of the frame height, feet at about 18% from the bottom edge. Between them, in the "
+           "lower middle of the frame, stands a BIG smooth round WHITE rock, about as tall as the children's waist, like a blank canvas. "
+           "STELLINA floats above the rock."),
+  action=[
+   "0-1s: Luna and Leo already lean towards the clean white rock with curious faces; STELLINA bounces above it and a BIG glossy RED paint drop forms under her.",
+   "1-4s: the RED drop falls onto the left side of the white rock and bursts into a big round splash of red paint with tiny red sparkles; Luna claps and says 'ooh!'.",
+   "4-7s: a BIG YELLOW drop falls next to the red splash and bursts; where red and yellow touch, the paint swirls and becomes bright ORANGE; Leo jumps with joy.",
+   "7-10s: a BIG BLUE drop falls on the right side, next to the yellow, and bursts; where yellow and blue touch, the paint swirls and becomes GREEN; Luna and Leo clap together.",
+   "10-12s: STELLINA does one gentle spin and a shower of sparkles washes the rock perfectly clean and white again; Luna and Leo lean towards it with curious faces, exactly as at the very beginning, and a new red drop starts to form under STELLINA.",
+  ],
+  rules="RULES: always exactly three characters: Luna, Leo and STELLINA, only ONE STELLINA; STELLINA never changes color and never has arms. Only ONE drop falls at a time and only on the white rock, never on the children. The paint stays on the rock; the children's suits stay clean. Only red + yellow make orange and only yellow + blue make green; the colors never change by themselves. The rock never moves. ",
+  audio="AUDIO: an original playful xylophone and pizzicato strings melody, 100 bpm; a soft 'plop' and a bright note for each drop, a bubbly swirl sound when two colors mix, children's 'ooh!' and giggles, a sparkly shimmer when STELLINA cleans the rock; the music ends on the same note and phrase it starts with, so the video loops seamlessly.",
+  title_it="Gocce di tempera! 🎨 Rosso e giallo che colore fa? Con Stellina ⭐ | Colori per bambini #shorts",
+  title_en="Paint Drops! 🎨 What Do Red and Yellow Make? With Stella ⭐ | Colors for Toddlers #shorts",
+  desc_it="Stellina fa cadere grandi gocce di tempera su un sasso bianco di Marte: rosso e giallo fanno l'arancione, giallo e blu fanno il verde! 🎨 ⭐",
+  desc_en="Stella drops big paint drops on a white Mars rock: red and yellow make orange, yellow and blue make green! 🎨 ⭐",
+  cover_s=8.8,
+ ),
  "EP025": dict(
   title="Ciao, sono Stellina!", slug="ciao_sono_stellina", duration=12, cast=["luna", "leo", "stellina"], world="mars_B",
   goal="Presentazione di Stellina (formato 'Ciao!'): i suoi tre poteri — luce che respira, scia di scintille, giravolta — poi arrivano Luna e Leo.",

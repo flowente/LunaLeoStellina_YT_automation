@@ -1,7 +1,9 @@
 """Bot Telegram: report delle bozze con i pulsanti Approva / Rifai / Programma, e comandi.
 
 Comandi (solo dalla chat TELEGRAM_CHAT_ID):
+  /nuovo idea      propone un episodio nuovo (OpenAI) con pulsanti Ok/Rifai/Annulla
   /bozza EP027      genera la bozza (con controllo)
+  /annulla EP027    esce dalla produzione dell'episodio
   /stato EP027      stato dell'episodio
   /episodi          elenco episodi definiti
   /programma EP026 20/10 17:30   programma su Buffer (oppure: coda)
@@ -77,8 +79,9 @@ def draft_report(out):
 
 
 def draft_buttons(ep, take):
-    return [[{"text": "✅ Approva (1080p)", "callback_data": f"approve|{ep}|{take}"},
-             {"text": "Rifai bozza", "callback_data": f"draft|{ep}|0"}]]
+    return [[{"text": "Approva (1080p)", "callback_data": f"approve|{ep}|{take}"},
+             {"text": "Rifai bozza", "callback_data": f"draft|{ep}|0"}],
+            [{"text": "Annulla episodio", "callback_data": f"abort|{ep}|{take}"}]]
 
 
 def final_buttons(ep, take):

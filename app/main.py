@@ -12,7 +12,7 @@ from pathlib import Path
 import requests
 from fastapi import FastAPI, Header, HTTPException, Body, Request
 from fastapi.responses import FileResponse, PlainTextResponse
-from . import config, episodes, kie, postprod, qc, judge, storage, buffer, costs, telegram
+from . import config, episodes, kie, postprod, qc, judge, storage, buffer, costs, telegram, writer
 
 app = FastAPI(title="Luna Leo & Stellina — automazione short")
 JOBS: dict = {}
@@ -54,7 +54,7 @@ def notify(event, payload):
                 telegram.send(f"<b>{ep}</b> · programmato su Buffer: {telegram.esc(payload['buffer'].get('dueAt') or 'in coda')}")
             elif event == "error":
                 telegram.send(f"⚠️ <b>{ep}</b> · errore in {payload.get('kind')}: {telegram.esc(payload.get('error'))}")
-            elif event == "started":
+            elif event == "started" and payload.get("kind") != "proposta":
                 telegram.send(f"<b>{ep}</b> · {'bozza' if payload.get('kind')=='draft' else payload.get('kind')} avviata")
     except Exception as e:
         print("telegram:", e)
@@ -111,11 +111,15 @@ def kie_generate(ep, take, req, stem: Path, tipo, log, kind="draft", task=None):
 # ------------------------------------------------------------------ fasi
 def do_draft(ep, log, resume=None):
     E, req = episodes.request_for(ep, draft=True)
+    if not resume:
+        st0 = state(ep); st0.pop("aborted", None); save_state(ep, st0)
     s = state(ep); take = resume["take"] if resume else len(s["takes"]) + 1
     stem = ep_dir(ep) / "renders" / f"{ep}_take{take:02d}"
     stem.with_suffix(".request.json").write_text(json.dumps(req, ensure_ascii=False, indent=1), encoding="utf-8")
     task, raw = kie_generate(ep, take, req, stem, "bozza 480p", log, "draft", (resume or {}).get("task"))
     s = state(ep)
+    if s.get("aborted"):
+        progress(ep, "produzione annullata: bozza scaricata ma non elaborata"); return {"episode": ep, "aborted": True}
     progress(ep, "video ricevuto: post-produzione (colori, loop, audio)")
     final = postprod.finalize(raw, E, episodes.channel()["post"]); log("post-produzione ok")
     progress(ep, "controllo qualità in corso (misure e giudice)")
@@ -238,6 +242,31 @@ def add_cost(row: dict = Body(...), x_token: str = Header(None)):
     auth(x_token); costs.record(**row); return {"ok": True}
 
 
+def abort(ep):
+    st = state(ep); st["aborted"] = datetime.datetime.now().isoformat(timespec="seconds"); st.pop("pending", None); save_state(ep, st)
+    telegram.send(f"<b>{ep}</b> · produzione annullata. Nessuna bozza nuova e nessun 1080p. "
+                  f"(Se una generazione era già partita su Seedance, il costo è già stato speso.)")
+
+
+def prop_file(ep):
+    d = config.DATA / config.CHANNEL / "proposals"; d.mkdir(parents=True, exist_ok=True); return d / f"{ep}.json"
+
+
+def do_propose(ep, idea, log, feedback=""):
+    spec, usage, cost = writer.write(idea, feedback)
+    costs.record(episodio=ep, tipo="scrittura episodio", servizio="openai", modello=config.OPENAI_MODEL, costo_usd=cost, esito="ok", note=json.dumps(usage))
+    prop_file(ep).write_text(json.dumps({"idea": idea, "spec": spec}, ensure_ascii=False, indent=1), encoding="utf-8")
+    sp = dict(spec); summary = sp.pop("riassunto_it", "")
+    episodes.define(ep + "_check", sp); episodes.request_for(ep + "_check")      # verifica formato
+    f = episodes.extra_file(); d = json.loads(f.read_text(encoding="utf-8")); d.pop(ep + "_check", None); f.write_text(json.dumps(d, ensure_ascii=False, indent=1), encoding="utf-8")
+    telegram.send(f"<b>{ep}</b> · proposta: <b>{telegram.esc(spec['title'])}</b> ({spec['duration']}s, {spec['world']})\n"
+                  f"{telegram.esc(summary)}\n\nTitolo: {telegram.esc(spec['title_it'])}",
+                  [[{"text": "Ok, fai la bozza", "callback_data": f"nuovo_ok|{ep}|0"},
+                    {"text": "Rifai idea", "callback_data": f"nuovo_rifai|{ep}|0"},
+                    {"text": "Annulla", "callback_data": f"nuovo_no|{ep}|0"}]])
+    return {"episode": ep, "title": spec["title"]}
+
+
 # ------------------------------------------------------------------ Telegram
 @app.on_event("startup")
 def _tg_startup():
@@ -258,7 +287,7 @@ def _tg_startup():
     lines = ["Servizio avviato."]
     lines.append("Riprendo: " + ", ".join(resumed) if resumed else "Nessun lavoro in corso.")
     if lost: lines.append("Interrotte dal riavvio, da rilanciare: " + ", ".join(lost) + " (usa /bozza).")
-    lines.append("Comandi: /episodi · /bozza EP0xx · /stato EP0xx · /programma EP0xx 20/10 17:30 · /costi")
+    lines.append("Comandi: /episodi · /nuovo idea · /bozza EP0xx · /annulla EP0xx · /stato EP0xx · /programma EP0xx 20/10 17:30 · /costi")
     try:
         if telegram.enabled(): threading.Thread(target=telegram.send, args=("\n".join(lines),), daemon=True).start()
     except Exception as e:
@@ -267,6 +296,7 @@ def _tg_startup():
     for f in (config.DATA / config.CHANNEL / "episodes").glob("*/state.json"):
         try:
             st = json.loads(f.read_text(encoding="utf-8")); ep = st.get("episode") or f.parent.name
+            if st.get("aborted"): continue
             for kind, p in (st.get("pending") or {}).items():
                 if kind == "draft": run_job("draft", ep, do_draft, ep, resume=p)
                 elif kind == "approve": run_job("approve", ep, do_approve, ep, p["take"], resume=p)
@@ -302,6 +332,16 @@ async def telegram_webhook(request: Request, x_telegram_bot_api_secret_token: st
         elif action == "draft": run_job("draft", ep, do_draft, ep)
         elif action == "schedule": run_job("schedule", ep, do_schedule, ep, take, None, None)
         elif action == "noop": telegram.send(f"Ok, {ep} resta pronto senza programmazione.")
+        elif action == "abort": abort(ep)
+        elif action == "nuovo_ok":
+            pr = json.loads(prop_file(ep).read_text(encoding="utf-8")); sp = dict(pr["spec"]); sp.pop("riassunto_it", None)
+            episodes.define(ep, sp); prop_file(ep).unlink(missing_ok=True)
+            run_job("draft", ep, do_draft, ep)
+        elif action == "nuovo_rifai":
+            pr = json.loads(prop_file(ep).read_text(encoding="utf-8"))
+            run_job("proposta", ep, do_propose, ep, pr["idea"], feedback="proponi una versione diversa")
+        elif action == "nuovo_no":
+            prop_file(ep).unlink(missing_ok=True); telegram.send(f"Proposta {ep} annullata.")
         return {"ok": True}
     m = u.get("message") or {}; chat = str((m.get("chat") or {}).get("id", "")); text = (m.get("text") or "").strip()
     if not text: return {"ok": True}
@@ -317,6 +357,14 @@ async def telegram_webhook(request: Request, x_telegram_bot_api_secret_token: st
             telegram.send(f"<b>{arg}</b>: {len(st['takes'])} take\n" + "\n".join(
                 f"take {k}: {(v.get('verdict') or {}).get('verdetto', '-')}{' · finale pronto' if v.get('final_url') else ''}"
                 f"{' · programmato' if v.get('buffer_post') else ''}" for k, v in st["takes"].items()))
+        elif cmd == "/annulla" and arg:
+            abort(arg)
+        elif cmd == "/nuovo":
+            idea = text.split(maxsplit=1)[1] if len(parts) > 1 else ""
+            if not idea: raise RuntimeError("Scrivi l'idea dopo il comando, es. /nuovo pozzanghere colorate su Marte")
+            ep_new = writer.next_id()
+            telegram.send(f"<b>{ep_new}</b> · scrivo la proposta…")
+            run_job("proposta", ep_new, do_propose, ep_new, idea)
         elif cmd in ("/programma", "/pianifica") and arg:
             # /programma EP026 20/10 17:30   oppure   /programma EP026 2026-10-20 17:30   oppure   /programma EP026 coda
             st = state(arg); ready = [k for k, v in st["takes"].items() if v.get("final_url")]
@@ -343,7 +391,7 @@ async def telegram_webhook(request: Request, x_telegram_bot_api_secret_token: st
             rows = costs.rows(); tot = sum(float(r.get("costo_usd") or 0) for r in rows)
             telegram.send(f"Spese registrate sul servizio: <b>${tot:.2f}</b> ({len(rows)} voci)")
         else:
-            telegram.send("Comandi:\n/episodi — elenco episodi\n/bozza EP027 — genera la bozza\n/stato EP027 — stato\n/programma EP026 20/10 17:30 — programma su Buffer (ora italiana)\n/programma EP026 coda — mette in coda Buffer\n/costi — spese\n/id — chat id")
+            telegram.send("Comandi:\n/episodi — elenco episodi\n/nuovo idea — propone un episodio nuovo\n/bozza EP027 — genera la bozza\n/annulla EP027 — esce dalla produzione dell'episodio\n/stato EP027 — stato\n/programma EP026 20/10 17:30 — programma su Buffer (ora italiana)\n/programma EP026 coda — mette in coda Buffer\n/costi — spese\n/id — chat id")
     except Exception as e:
         telegram.send(f"⚠️ {telegram.esc(e)}")
     return {"ok": True}
