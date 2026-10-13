@@ -7,7 +7,7 @@ Flusso (n8n fa da regia e ti chiede l'ok):
   4. POST /episodes/{ep}/cleanup   -> cancella i file temporanei da Supabase dopo la pubblicazione
 Ogni chiamata richiede l'header  X-Token: <SERVICE_TOKEN>.
 """
-import json, threading, traceback, uuid, datetime
+import json, os, threading, traceback, uuid, datetime
 from pathlib import Path
 import requests
 from fastapi import FastAPI, Header, HTTPException, Body, Request
@@ -221,8 +221,24 @@ def add_cost(row: dict = Body(...), x_token: str = Header(None)):
 # ------------------------------------------------------------------ Telegram
 @app.on_event("startup")
 def _tg_startup():
-    try: print("telegram webhook:", telegram.set_webhook())
-    except Exception as e: print("telegram webhook non impostato:", e)
+    def reg():
+        try: print("telegram webhook:", telegram.set_webhook(), flush=True)
+        except Exception as e: print("telegram webhook non impostato:", e, flush=True)
+    threading.Thread(target=reg, daemon=True).start()   # mai bloccare l'avvio del servizio
+
+
+@app.get("/telegram/status")
+def telegram_status(x_token: str = Header(None)):
+    auth(x_token)
+    info = telegram.call("getWebhookInfo") or {}
+    r = info.get("result", {})
+    return {"token_ok": bool(info.get("ok")), "webhook_url": r.get("url"), "last_error": r.get("last_error_message"),
+            "pending": r.get("pending_update_count"), "domain": os.environ.get("RAILWAY_PUBLIC_DOMAIN")}
+
+
+@app.post("/telegram/register")
+def telegram_register(x_token: str = Header(None)):
+    auth(x_token); return telegram.set_webhook() or {"ok": False, "motivo": "token o dominio mancante"}
 
 
 @app.post("/telegram/webhook")
