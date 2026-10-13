@@ -12,6 +12,7 @@ Regole OBBLIGATORIE:
 - Durata 12 secondi (15 solo se ci sono tre ripetizioni che lo richiedono). Azioni in inglese, a blocchi di tempo "0-1s: ...", "1-4s: ...", fino alla durata esatta.
 - Struttura: aggancio immediato (personaggi già in scena e in movimento al primo fotogramma), ripetizioni "una alla volta", finale che torna ESATTAMENTE alla posa e posizione iniziali (loop perfetto), niente saluto alla camera.
 - Format interattivi: colori, contare, imitazione. Oggetti grandi vicino ai bambini; niente oggetti piccoli in cielo, niente conteggi con le dita, niente giravolte complicate.
+- COLORI: oggetti, vernici, pozzanghere e schizzi sempre a campiture PIENE, opache, sature e ben definite (come i sassi e i cestini di EP006); trasparenti solo bolle o luci.
 - Nessuna scritta nel video. Nessun prop complesso che richieda una tavola di riferimento (niente animali, veicoli nuovi, strumenti, cibo con forme precise): solo luci, bolle, pozzanghere, nuvolette, scintille, gocce di colore, sassi.
 - Regole esplicite per evitare scambi: chi tocca cosa, quanti oggetti, i colori non cambiano da soli.
 - Se la tuta si sporca o cambia colore per la storia, nel finale torna pulita (per il loop) e va scritto chiaramente.

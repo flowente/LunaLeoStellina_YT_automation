@@ -45,6 +45,11 @@ HOOK_LOOP = ("HOOK: from the very first frame the characters are already visible
              "scene, no slow intro. LOOP: the last second ends with the characters in the SAME positions, poses, facial expressions, framing and lighting as "
              "the very first frame, so that the end flows seamlessly back into the beginning. ")
 
+# Regola colori (Simone, 14/10/2026): campiture piene e ben definite come i sassi e i cestini di EP006
+COLOR_RULE = ("COLORS: every colored object, paint, puddle and splash uses SOLID, OPAQUE, fully saturated flat colors with clean, "
+              "well-defined edges, like glossy toy plastic: pure red, pure blue, pure yellow, clearly distinct from each other and from "
+              "the orange Mars sand. No washed-out, muddy, pastel or semi-transparent colors (only bubbles or light effects may be translucent). ")
+
 RULES_BASE = ("helmets always on, children's feet on the ground, consistent faces and colors in every frame, smooth bouncy "
               "toddler-friendly motion, no morphing, no flicker, no text, no numbers, no letters, no logos.")
 AUDIO_TAIL = " No song titles, no lyrics, no words, no speech, no loud sounds, no sudden noises."
@@ -253,13 +258,13 @@ EPISODES = {
   goal="Colori rosso, blu, giallo (playlist colori). Interattivo: in quale pozzanghera salta? La tuta si colora e alla fine torna pulita (loop).",
   framing=("FRAMING: medium shot, the SAME framing from the very first frame to the last (no zoom, no push-in). Luna stands on the LEFT and "
            "Leo on the RIGHT, side by side in the center; their full bodies fill about 40% of the frame height, feet at about 18% from the bottom "
-           "edge. In front of them on the sand lie three big round shallow puddles of bright colored water in a row: RED on the left, BLUE on the "
+           "edge. In front of them on the sand lie three big round shallow puddles of thick, opaque, glossy paint in solid bright colors, in a row: RED on the left, BLUE on the "
            "right, YELLOW in the middle. STELLINA floats in the middle, just above their helmets."),
   action=[
    "0-1s: Luna and Leo, in perfectly clean white suits, already bounce on the spot looking at the three bright puddles; STELLINA glows above them.",
-   "1-4s: Luna does a big happy jump INTO the RED puddle: a soft splash of red drops sprinkles her boots and legs with round red paint dots; she giggles and hops back to her spot.",
-   "4-7s: Leo does a big happy jump INTO the BLUE puddle: a soft splash of blue drops sprinkles his boots and legs with round blue paint dots; he wiggles happily and hops back to his spot.",
-   "7-10s: Luna and Leo hold hands and jump TOGETHER into the YELLOW puddle in the middle: a big soft yellow splash adds round yellow dots to both suits; they laugh and hop back to their spots.",
+   "1-4s: Luna does a big happy jump INTO the RED puddle: a soft splash sprinkles her boots and legs with round, solid, opaque RED paint dots with clean edges; she giggles and hops back to her spot.",
+   "4-7s: Leo does a big happy jump INTO the BLUE puddle: a soft splash sprinkles his boots and legs with round, solid, opaque BLUE paint dots with clean edges; he wiggles happily and hops back to his spot.",
+   "7-10s: Luna and Leo hold hands and jump TOGETHER into the YELLOW puddle in the middle: a big soft splash adds round, solid, opaque YELLOW dots to both suits; they laugh and hop back to their spots.",
    "10-12s: STELLINA does one gentle spin and a shower of sparkles falls on the children: all the paint dots disappear and their suits are perfectly clean white again, exactly as at the very beginning, both bouncing on the spot looking at the puddles.",
   ],
   rules="RULES: always exactly three characters: Luna, Leo and STELLINA, only ONE STELLINA; STELLINA never changes color and never has arms. Exactly three puddles that never move and never change color: red, blue, yellow. Luna jumps ONLY into the red puddle, Leo ONLY into the blue puddle, both together into the yellow one. The paint makes only small round colored dots on boots and legs, never on faces or helmets; the suits are clean at the start and clean again at the end. Gentle, joyful, never messy or dirty-looking. ",
@@ -299,9 +304,9 @@ EPISODES = {
            "STELLINA floats above the rock."),
   action=[
    "0-1s: Luna and Leo already lean towards the clean white rock with curious faces; STELLINA bounces above it and a BIG glossy RED paint drop forms under her.",
-   "1-4s: the RED drop falls onto the left side of the white rock and bursts into a big round splash of red paint with tiny red sparkles; Luna claps and says 'ooh!'.",
-   "4-7s: a BIG YELLOW drop falls next to the red splash and bursts; where red and yellow touch, the paint swirls and becomes bright ORANGE; Leo jumps with joy.",
-   "7-10s: a BIG BLUE drop falls on the right side, next to the yellow, and bursts; where yellow and blue touch, the paint swirls and becomes GREEN; Luna and Leo clap together.",
+   "1-4s: the RED drop falls onto the left side of the white rock and bursts into a big round splash of thick, opaque, glossy RED paint with clean edges; Luna claps and says 'ooh!'.",
+   "4-7s: a BIG YELLOW drop falls next to the red splash and bursts; where red and yellow touch, the paint swirls and becomes a solid, bright ORANGE area with clean edges; Leo jumps with joy.",
+   "7-10s: a BIG BLUE drop falls on the right side, next to the yellow, and bursts; where yellow and blue touch, the paint swirls and becomes a solid, bright GREEN area with clean edges; Luna and Leo clap together.",
    "10-12s: STELLINA does one gentle spin and a shower of sparkles washes the rock perfectly clean and white again; Luna and Leo lean towards it with curious faces, exactly as at the very beginning, and a new red drop starts to form under STELLINA.",
   ],
   rules="RULES: always exactly three characters: Luna, Leo and STELLINA, only ONE STELLINA; STELLINA never changes color and never has arms. Only ONE drop falls at a time and only on the white rock, never on the children. The paint stays on the rock; the children's suits stay clean. Only red + yellow make orange and only yellow + blue make green; the colors never change by themselves. The rock never moves. ",
@@ -350,7 +355,7 @@ def build(ep_id):
         ("CAST", "\n".join(cast_lines)),
         ("SET", "SET: " + SETS[E["world"]].format(img=tag[E["world"]])),
         ("ACTION", "ACTION (gentle, bouncy movements in time with the music):\n" + "\n".join(E["action"])),
-        ("RULES", E["rules"] + ("" if E.get("no_loop") else HOOK_LOOP) + RULES_BASE),
+        ("RULES", E["rules"] + ("" if E.get("no_loop") else HOOK_LOOP) + COLOR_RULE + RULES_BASE),
         ("AUDIO", E["audio"] + AUDIO_TAIL),
     ]
     refs = [(tag[k], "mondo" if k == E["world"] else ("prop" if k in E.get("props", []) else "personaggio"), k, REFS[k]) for k in order]
