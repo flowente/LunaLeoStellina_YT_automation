@@ -10,9 +10,9 @@ Ogni chiamata richiede l'header  X-Token: <SERVICE_TOKEN>.
 import json, threading, traceback, uuid, datetime
 from pathlib import Path
 import requests
-from fastapi import FastAPI, Header, HTTPException, Body
+from fastapi import FastAPI, Header, HTTPException, Body, Request
 from fastapi.responses import FileResponse, PlainTextResponse
-from . import config, episodes, kie, postprod, qc, judge, storage, buffer, costs
+from . import config, episodes, kie, postprod, qc, judge, storage, buffer, costs, telegram
 
 app = FastAPI(title="Luna Leo & Stellina — automazione short")
 JOBS: dict = {}
@@ -38,6 +38,26 @@ def save_state(ep, s):
 
 
 def notify(event, payload):
+    try:
+        if telegram.enabled():
+            ep, take = payload.get("episode"), payload.get("take")
+            if event == "draft_ready":
+                txt = telegram.draft_report(payload)
+                if payload.get("preview_url"): telegram.send_video(payload["preview_url"], txt, telegram.draft_buttons(ep, take))
+                else: telegram.send(txt, telegram.draft_buttons(ep, take))
+            elif event == "final_ready":
+                telegram.send(f"🎉 <b>{ep}</b> finale 1080p pronto (copia su Drive in corso).\n"
+                              f'<a href="{payload["final_url"]}">▶️ Finale</a> · <a href="{payload["cover_url"]}">🖼 Copertina</a>\n\n'
+                              f"<b>Titolo:</b> {telegram.esc(payload['title_it'])}\n<b>EN:</b> {telegram.esc(payload['title_en'])}",
+                              telegram.final_buttons(ep, take))
+            elif event == "scheduled":
+                telegram.send(f"📅 <b>{ep}</b> programmato su Buffer: {telegram.esc(payload['buffer'].get('dueAt') or 'in coda')}")
+            elif event == "error":
+                telegram.send(f"⚠️ Errore {payload.get('kind')} su <b>{ep}</b>: {telegram.esc(payload.get('error'))}")
+            elif event == "started":
+                telegram.send(f"⏳ {payload.get('kind')} avviato per <b>{ep}</b>…")
+    except Exception as e:
+        print("telegram:", e)
     if not config.N8N_WEBHOOK_URL: return
     try:
         requests.post(config.N8N_WEBHOOK_URL, json={"event": event, "channel": config.CHANNEL, **payload}, timeout=30)
@@ -56,6 +76,7 @@ def run_job(kind, ep, fn, *args):
             JOBS[jid].update(status="error", error=str(e)); log(traceback.format_exc())
             notify("error", {"episode": ep, "job": jid, "kind": kind, "error": str(e)})
     threading.Thread(target=target, daemon=True).start()
+    notify("started", {"episode": ep, "kind": kind})
     return JOBS[jid]
 
 
@@ -124,7 +145,8 @@ def do_schedule(ep, take, due_at, mode, log):
 @app.get("/health")
 def health():
     return {"ok": True, "channel": config.CHANNEL,
-            "keys": {k: bool(getattr(config, k)) for k in ("KIE_API_KEY", "OPENAI_API_KEY", "SUPABASE_KEY", "BUFFER_API_KEY", "N8N_WEBHOOK_URL")}}
+            "keys": {**{k: bool(getattr(config, k)) for k in ("KIE_API_KEY", "OPENAI_API_KEY", "SUPABASE_KEY", "BUFFER_API_KEY", "N8N_WEBHOOK_URL")},
+                     "TELEGRAM_BOT_TOKEN": bool(telegram.TOKEN), "TELEGRAM_CHAT_ID": bool(telegram.CHAT)}}
 
 
 @app.get("/episodes")
@@ -194,3 +216,52 @@ def get_costs(x_token: str = Header(None)):
 def add_cost(row: dict = Body(...), x_token: str = Header(None)):
     """Spese manuali (es. Railway, immagini): {"tipo":"Railway ottobre","servizio":"railway","costo_usd":5}"""
     auth(x_token); costs.record(**row); return {"ok": True}
+
+
+# ------------------------------------------------------------------ Telegram
+@app.on_event("startup")
+def _tg_startup():
+    try: print("telegram webhook:", telegram.set_webhook())
+    except Exception as e: print("telegram webhook non impostato:", e)
+
+
+@app.post("/telegram/webhook")
+async def telegram_webhook(request: Request, x_telegram_bot_api_secret_token: str = Header(None)):
+    if not telegram.check_secret(x_telegram_bot_api_secret_token): raise HTTPException(401)
+    u = await request.json()
+    if "callback_query" in u:
+        q = u["callback_query"]; chat = str(q["message"]["chat"]["id"])
+        telegram.call("answerCallbackQuery", callback_query_id=q["id"])
+        if chat != str(telegram.CHAT): return {"ok": True}
+        action, ep, take = (q.get("data", "") + "||").split("|")[:3]
+        take = int(take or 0)
+        if action == "approve": run_job("approve", ep, do_approve, ep, take)
+        elif action == "draft": run_job("draft", ep, do_draft, ep)
+        elif action == "schedule": run_job("schedule", ep, do_schedule, ep, take, None, None)
+        elif action == "noop": telegram.send(f"Ok, {ep} resta pronto senza programmazione.")
+        return {"ok": True}
+    m = u.get("message") or {}; chat = str((m.get("chat") or {}).get("id", "")); text = (m.get("text") or "").strip()
+    if not text: return {"ok": True}
+    if text.startswith("/id") or text.startswith("/start"):
+        telegram.send(f"Il tuo chat id è <code>{chat}</code>", chat=chat); return {"ok": True}
+    if chat != str(telegram.CHAT): return {"ok": True}
+    parts = text.split(); cmd = parts[0].lower(); arg = parts[1].upper() if len(parts) > 1 else ""
+    try:
+        if cmd == "/bozza" and arg:
+            episodes.request_for(arg); run_job("draft", arg, do_draft, arg)
+        elif cmd == "/stato" and arg:
+            st = state(arg)
+            telegram.send(f"<b>{arg}</b>: {len(st['takes'])} take\n" + "\n".join(
+                f"take {k}: {(v.get('verdict') or {}).get('verdetto', '-')}{' · finale pronto' if v.get('final_url') else ''}"
+                f"{' · programmato' if v.get('buffer_post') else ''}" for k, v in st["takes"].items()))
+        elif cmd == "/episodi":
+            _, eps = episodes.all_episodes()
+            telegram.send("\n".join(f"{k} · {v['title']} ({v['duration']}s) · take {len(state(k)['takes'])}" for k, v in sorted(eps.items())))
+        elif cmd == "/costi":
+            rows = costs.rows(); tot = sum(float(r.get("costo_usd") or 0) for r in rows)
+            telegram.send(f"Spese registrate sul servizio: <b>${tot:.2f}</b> ({len(rows)} voci)")
+        else:
+            telegram.send("Comandi: /bozza EP027 · /stato EP027 · /episodi · /costi · /id")
+    except Exception as e:
+        telegram.send(f"⚠️ {telegram.esc(e)}")
+    return {"ok": True}

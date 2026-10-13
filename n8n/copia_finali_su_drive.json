@@ -1,0 +1,56 @@
+{
+  "name": "LunaLeoStellina — copia finali su Drive",
+  "nodes": [
+    {
+      "parameters": {"httpMethod": "POST", "path": "lunaleo-events", "responseMode": "onReceived", "options": {}},
+      "id": "a1", "name": "Eventi dal servizio", "type": "n8n-nodes-base.webhook", "typeVersion": 2, "position": [0, 0],
+      "webhookId": "lunaleo-events"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {"caseSensitive": true, "leftValue": "", "typeValidation": "strict"},
+          "conditions": [{"id": "c1", "leftValue": "={{ $json.body.event }}", "rightValue": "final_ready",
+                          "operator": {"type": "string", "operation": "equals"}}],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a2", "name": "Finale pronto?", "type": "n8n-nodes-base.if", "typeVersion": 2, "position": [220, 0]
+    },
+    {
+      "parameters": {"url": "={{ $json.body.final_url }}", "options": {"response": {"response": {"responseFormat": "file"}}}},
+      "id": "a3", "name": "Scarica finale", "type": "n8n-nodes-base.httpRequest", "typeVersion": 4.2, "position": [440, -80]
+    },
+    {
+      "parameters": {
+        "name": "={{ $('Eventi dal servizio').item.json.body.file_name }}",
+        "driveId": {"__rl": true, "mode": "list", "value": "My Drive"},
+        "folderId": {"__rl": true, "mode": "list", "value": "", "cachedResultName": "SCEGLI LA CARTELLA SINCRONIZZATA COL PC"},
+        "options": {}
+      },
+      "id": "a4", "name": "Salva finale su Drive", "type": "n8n-nodes-base.googleDrive", "typeVersion": 3, "position": [660, -80]
+    },
+    {
+      "parameters": {"url": "={{ $('Eventi dal servizio').item.json.body.cover_url }}", "options": {"response": {"response": {"responseFormat": "file"}}}},
+      "id": "a5", "name": "Scarica copertina", "type": "n8n-nodes-base.httpRequest", "typeVersion": 4.2, "position": [880, -80]
+    },
+    {
+      "parameters": {
+        "name": "={{ $('Eventi dal servizio').item.json.body.episode }}_copertina_1080x1920.png",
+        "driveId": {"__rl": true, "mode": "list", "value": "My Drive"},
+        "folderId": {"__rl": true, "mode": "list", "value": "", "cachedResultName": "SCEGLI LA STESSA CARTELLA"},
+        "options": {}
+      },
+      "id": "a6", "name": "Salva copertina su Drive", "type": "n8n-nodes-base.googleDrive", "typeVersion": 3, "position": [1100, -80]
+    }
+  ],
+  "connections": {
+    "Eventi dal servizio": {"main": [[{"node": "Finale pronto?", "type": "main", "index": 0}]]},
+    "Finale pronto?": {"main": [[{"node": "Scarica finale", "type": "main", "index": 0}], []]},
+    "Scarica finale": {"main": [[{"node": "Salva finale su Drive", "type": "main", "index": 0}]]},
+    "Salva finale su Drive": {"main": [[{"node": "Scarica copertina", "type": "main", "index": 0}]]},
+    "Scarica copertina": {"main": [[{"node": "Salva copertina su Drive", "type": "main", "index": 0}]]}
+  },
+  "settings": {"executionOrder": "v1"}
+}

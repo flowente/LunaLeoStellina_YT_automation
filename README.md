@@ -34,6 +34,23 @@ Sono nel codice: `app/channels/lunaleo/channel.json` ed `eps.py`.
 - Prima sempre la bozza 480p. Il 1080p si fa solo dopo l'ok di Simone.
 - Durata di default 12 s.
 
+## Telegram
+
+Il bot manda ogni bozza con il giudizio e due pulsanti: **✅ Approva (1080p)** e **🔁 Rifai bozza**. Quando il finale è pronto manda il link e il pulsante **📅 Metti in coda su Buffer**.
+
+Comandi del bot:
+- `/bozza EP027`: genera la bozza dell'episodio.
+- `/stato EP027`: mostra lo stato dell'episodio.
+- `/episodi`: elenca gli episodi definiti.
+- `/costi`: mostra il totale delle spese registrate.
+- `/id`: mostra il tuo chat id.
+
+Il webhook di Telegram si registra da solo all'avvio (usa `RAILWAY_PUBLIC_DOMAIN`). Il bot risponde solo alla chat `TELEGRAM_CHAT_ID`.
+
+## n8n
+
+`n8n/copia_finali_su_drive.json` va importato in n8n. Riceve l'evento `final_ready` e salva finale e copertina nella cartella Google Drive sincronizzata con il PC. L'URL di produzione del suo webhook va inserito nella variabile `N8N_WEBHOOK_URL` del servizio.
+
 ## Endpoint
 
 Ogni chiamata richiede l'header `X-Token: <SERVICE_TOKEN>`.
