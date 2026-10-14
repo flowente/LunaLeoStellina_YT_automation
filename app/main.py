@@ -186,15 +186,25 @@ def do_upscale(ep, take, log, as_final=False, resume=None):
     """Bozza 480p -> 1080p con SeedVR2 su fal. as_final=True quando lo usa "Approva" (UPSCALE_PROVIDER=fal),
     altrimenti è una prova (/upscale): il finale Seedance, se esiste, non viene toccato."""
     E, _ = episodes.request_for(ep, draft=True); s = state(ep); t = s["takes"][str(take)]
-    raw = ep_dir(ep) / "renders" / t["raw"]
-    if not raw.exists(): raise RuntimeError(f"bozza grezza non trovata sul volume: {raw.name}")
+    rd = ep_dir(ep) / "renders"
+    raw = rd / t["raw"] if t.get("raw") else None
+    # due sorgenti: la bozza GREZZA sul volume (normale) oppure, per episodi già fatti, la bozza già post-prodotta
+    # recuperata da Supabase: in quel caso colori, loop e audio sono già applicati e non si rifà finalize
+    from_raw = bool(raw and raw.exists())
+    if not from_raw:
+        if not t.get("preview_url"): raise RuntimeError(f"bozza non trovata né sul volume né su Supabase per {ep} take {take}")
+        raw = rd / t["final"]
+        if not raw.exists(): upscale.download(t["preview_url"], raw)
     if resume:
         job = {k: resume[k] for k in ("request_id", "status_url", "response_url")}
         progress(ep, "upscale: riprendo la richiesta fal interrotta dal riavvio")
     else:
-        raw_url = storage.upload(raw, f"{config.SUPABASE_VIDEO_PREFIX}/{config.CHANNEL}/{ep}/{raw.name}")
-        t["raw_url"] = raw_url; save_state(ep, s)
-        job = upscale.submit(raw_url); log(f"fal {job['request_id']}")
+        if from_raw:
+            src_url = storage.upload(raw, f"{config.SUPABASE_VIDEO_PREFIX}/{config.CHANNEL}/{ep}/{raw.name}")
+            t["raw_url"] = src_url; save_state(ep, s)
+        else:
+            src_url = t["preview_url"]
+        job = upscale.submit(src_url); log(f"fal {job['request_id']}")
         st = state(ep); st.setdefault("pending", {})["upscale"] = {**job, "take": take, "as_final": as_final}; save_state(ep, st)
         progress(ep, f"take {take}: upscale a 1080p avviato su fal (di solito 2-5 minuti)")
     res = upscale.wait(job, log=log)
@@ -207,8 +217,12 @@ def do_upscale(ep, take, log, as_final=False, resume=None):
                  note=f"noise {config.FAL_UPSCALE_NOISE}, seed {config.FAL_UPSCALE_SEED}, fix {config.UPSCALE_FIX_VF}")
     st = state(ep); st.get("pending", {}).pop("upscale", None); save_state(ep, st)
     progress(ep, "upscale ricevuto: correzione colore, post-produzione e confronto con la bozza")
-    conformed = upscale.conform(fal_out, raw, stem.with_suffix(".mp4"))
-    final = postprod.finalize(conformed, E, episodes.channel()["post"]); log("finale upscale ok")
+    if from_raw:
+        conformed = upscale.conform(fal_out, raw, stem.with_suffix(".mp4"))
+        final = postprod.finalize(conformed, E, episodes.channel()["post"])
+    else:
+        final = upscale.conform(fal_out, raw, stem.with_name(stem.name + "_final.mp4"))
+    log("finale upscale ok")
     check = check_vs_draft(ep_dir(ep) / "renders" / t["final"], final) if t.get("final") else {"esito": "non misurabile"}
     cover = postprod.frame(final, float(E.get("cover_s", 1.0)), stem.with_name(f"{ep}_copertina_up_1080x1920.png"))
     up = lambda q: storage.upload(q, f"{config.SUPABASE_VIDEO_PREFIX}/{config.CHANNEL}/{ep}/{q.name}")
@@ -230,6 +244,36 @@ def do_upscale(ep, take, log, as_final=False, resume=None):
                       [[{"text": "Usa come finale", "callback_data": f"useup|{ep}|{take}"},
                         {"text": "Non ora", "callback_data": f"noop|{ep}|{take}"}]])
     return out
+
+
+def recover_take(ep, take):
+    """Episodi prodotti prima di un riavvio senza volume, o fuori dal servizio: recupera la bozza da Supabase."""
+    name = f"{ep}_take{take:02d}_final.mp4"
+    url = storage.public_url(f"{config.SUPABASE_VIDEO_PREFIX}/{config.CHANNEL}/{ep}/{name}")
+    if requests.head(url, timeout=30).status_code != 200: return None
+    s = state(ep); s["takes"][str(take)] = {"final": name, "preview_url": url, "recuperata": "supabase"}
+    fin = url.replace(name, f"{ep}_take{take:02d}_1080p_final.mp4")
+    if requests.head(fin, timeout=30).status_code == 200:
+        s["takes"][str(take)].update(final_url=fin, final_1080=fin.rsplit("/", 1)[-1])
+    save_state(ep, s); return s["takes"][str(take)]
+
+
+def start_upscale(ep, want=None):
+    if not config.FAL_KEY: raise RuntimeError("FAL_KEY non impostata nelle variabili di Railway")
+    episodes.request_for(ep); st = state(ep)
+    if not st["takes"] or (want and str(want) not in st["takes"]):
+        if not recover_take(ep, want or 1):
+            raise RuntimeError(f"{ep}: nessuna bozza{f' take {want}' if want else ''} né sul servizio né su Supabase")
+        telegram.send(f"<b>{ep}</b> · bozza recuperata da Supabase (già post-prodotta: faccio solo l'upscale e la correzione)")
+        st = state(ep)
+    take = want or int(sorted(st["takes"], key=int)[-1])
+    run_job("upscale", ep, do_upscale, ep, take, as_final=False)
+
+
+def episode_buttons(action, n=8):
+    """Pulsanti con gli ultimi episodi: dal menu "/" Telegram manda il comando senza episodio."""
+    _, eps = episodes.all_episodes(); ids = sorted(eps)[-n:][::-1]
+    return [[{"text": e, "callback_data": f"{action}|{e}|0"} for e in ids[i:i + 4]] for i in range(0, len(ids), 4)]
 
 
 def use_upscale_as_final(t):
@@ -437,6 +481,14 @@ async def telegram_webhook(request: Request, x_telegram_bot_api_secret_token: st
         elif action == "draft": run_job("draft", ep, do_draft, ep)
         elif action == "schedule": run_job("schedule", ep, do_schedule, ep, take, None, None)
         elif action == "noop": telegram.send(f"Ok, {ep} resta pronto senza programmazione.")
+        elif action == "cmd_upscale":
+            try: start_upscale(ep)
+            except Exception as e: telegram.send(f"⚠️ {telegram.esc(e)}")
+        elif action == "cmd_stato":
+            st = state(ep)
+            telegram.send(f"<b>{ep}</b>: {len(st['takes'])} take" + "".join(
+                f"\ntake {k}: {(v.get('verdict') or {}).get('verdetto', '-')}{' · finale pronto' if v.get('final_url') else ''}"
+                for k, v in st["takes"].items()))
         elif action == "useup":
             s = state(ep); t = s["takes"][str(take)]
             if not t.get("upscale"): telegram.send(f"<b>{ep}</b> · nessun upscale per la take {take}")
@@ -470,18 +522,16 @@ async def telegram_webhook(request: Request, x_telegram_bot_api_secret_token: st
                 "/stato": "/stato EP027", "/annulla": "/annulla EP027", "/modifica": "/modifica EP027 correzione",
                 "/programma": "/programma EP027 20/10 17:30  oppure  /programma EP027 coda"}
     if cmd in needs_ep and not arg:
-        telegram.send(f"Manca l'episodio. Scrivi così: <code>{telegram.esc(needs_ep[cmd])}</code>"); return {"ok": True}
+        pick = {"/upscale": "cmd_upscale", "/stato": "cmd_stato"}.get(cmd)
+        telegram.send(f"{'Scegli l’episodio, oppure scrivi' if pick else 'Manca l’episodio. Scrivi così'}: "
+                      f"<code>{telegram.esc(needs_ep[cmd])}</code>", episode_buttons(pick) if pick else None)
+        return {"ok": True}
     try:
         if cmd == "/bozza" and arg:
             episodes.request_for(arg); run_job("draft", arg, do_draft, arg)
         elif cmd == "/upscale" and arg:
             # /upscale EP028   (ultima take)   oppure   /upscale EP028 2
-            st = state(arg)
-            if not st["takes"]: raise RuntimeError(f"{arg} non ha ancora bozze")
-            take = int(parts[2]) if len(parts) > 2 and parts[2].isdigit() else int(sorted(st["takes"], key=int)[-1])
-            if str(take) not in st["takes"]: raise RuntimeError(f"{arg} non ha la take {take}")
-            if not config.FAL_KEY: raise RuntimeError("FAL_KEY non impostata nelle variabili di Railway")
-            run_job("upscale", arg, do_upscale, arg, take, as_final=False)
+            start_upscale(arg, int(parts[2]) if len(parts) > 2 and parts[2].isdigit() else None)
         elif cmd == "/stato" and arg:
             st = state(arg)
             telegram.send(f"<b>{arg}</b>: {len(st['takes'])} take\n" + "\n".join(
