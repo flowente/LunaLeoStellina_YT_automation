@@ -46,9 +46,23 @@ def send_video(url, caption, buttons=None):
     return res
 
 
+COMMANDS = [("episodi", "Elenco episodi"), ("nuovo", "Propone un episodio nuovo: /nuovo idea"),
+            ("bozza", "Genera la bozza: /bozza EP027"), ("upscale", "Prova l'upscale fal: /upscale EP027"),
+            ("modifica", "Corregge un episodio: /modifica EP027 correzione"), ("stato", "Stato: /stato EP027"),
+            ("programma", "Buffer: /programma EP027 20/10 17:30 oppure coda"), ("annulla", "Esce dalla produzione: /annulla EP027"),
+            ("costi", "Spese registrate"), ("id", "Mostra il chat id")]
+
+
+def set_commands():
+    """Menu "/" di Telegram: si aggiorna a ogni avvio, così rispecchia sempre il codice in produzione."""
+    return call("setMyCommands", commands=[{"command": c, "description": d} for c, d in COMMANDS])
+
+
 def set_webhook():
     dom = os.environ.get("RAILWAY_PUBLIC_DOMAIN") or os.environ.get("PUBLIC_DOMAIN")
     if not (TOKEN and dom): return None
+    try: set_commands()
+    except Exception as e: print("telegram comandi:", e)
     return call("setWebhook", url=f"https://{dom}/telegram/webhook", secret_token=_secret(),
                 allowed_updates=["message", "callback_query"])
 
