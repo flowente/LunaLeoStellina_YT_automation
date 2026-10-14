@@ -60,6 +60,8 @@ Il bot manda ogni bozza con il giudizio e due pulsanti: **✅ Approva (1080p)** 
 Comandi del bot:
 - `/bozza EP027`: genera la bozza dell'episodio.
 - `/upscale EP027`: prova l'upscale fal della bozza.
+- `/idee` (oppure `/idee colori`): 5 idee pronte, ispirate agli episodi esistenti. Per ognuna ✅ scrive l'episodio, 💬 apre il brainstorming.
+- `/brainstorming idea abbozzata`: conversazione libera (si scrive senza comandi); a ogni risposta arriva il pacchetto aggiornato, titolo e descrizione, con **Confermo: scrivi l'episodio**. `/fine` chiude.
 - `/stato EP027`: mostra lo stato dell'episodio.
 - `/episodi`: elenca gli episodi definiti.
 - `/costi`: mostra il totale delle spese registrate.

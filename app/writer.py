@@ -82,3 +82,56 @@ def revise(spec: dict, change: str):
     usage = j.get("usage", {})
     cost = (usage.get("input_tokens", 0) * config.OPENAI_PRICE_IN + usage.get("output_tokens", 0) * config.OPENAI_PRICE_OUT) / 1e6
     return json.loads(text), usage, round(cost, 4)
+
+
+# ------------------------------------------------------------------ brainstorming (/idee e /brainstorming)
+CONCEPTS = {"type": "object", "additionalProperties": False, "required": ["idee"],
+            "properties": {"idee": {"type": "array", "items": {
+                "type": "object", "additionalProperties": False, "required": ["titolo", "descrizione"],
+                "properties": {"titolo": {"type": "string"}, "descrizione": {"type": "string"}}}}}}
+
+BRAIN = {"type": "object", "additionalProperties": False, "required": ["risposta", "titolo", "descrizione"],
+         "properties": {"risposta": {"type": "string", "description": "2-5 righe in italiano: cosa hai capito, cosa proponi, al massimo 1-2 domande"},
+                        "titolo": {"type": "string"}, "descrizione": {"type": "string"}}}
+
+IDEA_RULES = """Lavori come autore del canale. Le idee devono essere realizzabili con le REGOLE del canale (sotto) e in 12 secondi.
+Ogni idea: titolo italiano breve (con al massimo un'emoji, per la stella solo ⭐) e una descrizione di 2-3 righe in italiano
+che dica cosa fanno Luna, Leo e Stellina, quale gioco o concetto imparano (colori, contare, imitazione...) e come il finale torna all'inizio (loop).
+Prendi spunto dai format degli episodi esistenti (elenco sotto) ma non ripeterli: varia oggetto, gioco o concetto."""
+
+
+def _catalog():
+    _, eps = episodes.all_episodes()
+    return "\n".join(f"- {k}: {v.get('title', '')}: {str(v.get('goal', ''))[:140]}" for k, v in sorted(eps.items()))
+
+
+def _call(prompt, schema, name):
+    if not config.OPENAI_API_KEY: raise RuntimeError("OPENAI_API_KEY non impostata")
+    body = {"model": config.OPENAI_MODEL, "input": [{"role": "user", "content": prompt}],
+            "text": {"format": {"type": "json_schema", "name": name, "schema": schema, "strict": True}}}
+    r = requests.post("https://api.openai.com/v1/responses", headers={"Authorization": f"Bearer {config.OPENAI_API_KEY}"},
+                      json=body, timeout=180)
+    r.raise_for_status(); j = r.json()
+    text = j.get("output_text") or "".join(c.get("text", "") for o in j.get("output", []) for c in o.get("content", []) if c.get("type") == "output_text")
+    usage = j.get("usage", {})
+    cost = (usage.get("input_tokens", 0) * config.OPENAI_PRICE_IN + usage.get("output_tokens", 0) * config.OPENAI_PRICE_OUT) / 1e6
+    return json.loads(text), usage, round(cost, 4)
+
+
+def concepts(tema: str = "", n: int = 5):
+    """/idee: n idee già pronte (titolo + descrizione) ispirate agli episodi esistenti."""
+    prompt = (IDEA_RULES + f"\n\nREGOLE DEL CANALE:\n{RULES}\n\nEPISODI ESISTENTI:\n{_catalog()}\n\n"
+              f"Proponi {n} idee nuove" + (f" sul tema: {tema}" if tema else " varie (colori, contare, imitazione, buone maniere)") + ".")
+    out, usage, cost = _call(prompt, CONCEPTS, "idee")
+    return out["idee"][:n], usage, cost
+
+
+def brainstorm(history: list):
+    """/brainstorming: conversazione. history = [{"chi": "simone"|"autore", "testo": ...}]. Restituisce risposta + pacchetto aggiornato."""
+    talk = "\n".join(f"{'SIMONE' if h['chi'] == 'simone' else 'TU'}: {h['testo']}" for h in history)
+    prompt = (IDEA_RULES + f"\n\nREGOLE DEL CANALE:\n{RULES}\n\nEPISODI ESISTENTI:\n{_catalog()}\n\n"
+              "Stai facendo brainstorming con Simone su UN episodio. Parti dalla sua idea abbozzata e definiscila: rendila realizzabile, "
+              "chiara e adatta a bambini di 1-4 anni. Se un suo desiderio viola le regole (es. animali, interni, scritte), dillo e proponi "
+              "l'alternativa più vicina. Rispondi breve. Ogni volta restituisci anche il 'pacchetto' aggiornato: titolo e descrizione, "
+              f"sempre completi.\n\nCONVERSAZIONE:\n{talk}")
+    return _call(prompt, BRAIN, "brainstorming")

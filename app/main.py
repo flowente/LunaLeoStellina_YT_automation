@@ -55,7 +55,7 @@ def notify(event, payload):
                 telegram.send(f"<b>{ep}</b> · programmato su Buffer: {telegram.esc(payload['buffer'].get('dueAt') or 'in coda')}")
             elif event == "error":
                 telegram.send(f"⚠️ <b>{ep}</b> · errore in {payload.get('kind')}: {telegram.esc(payload.get('error'))}")
-            elif event == "started" and payload.get("kind") != "proposta":
+            elif event == "started" and payload.get("kind") not in ("proposta", "idee", "brainstorming"):
                 telegram.send(f"<b>{ep}</b> · {'bozza' if payload.get('kind')=='draft' else payload.get('kind')} avviata")
     except Exception as e:
         print("telegram:", e)
@@ -380,6 +380,62 @@ def abort(ep):
                   f"(Se una generazione era già partita su Seedance, il costo è già stato speso.)")
 
 
+# ------------------------------------------------------------------ brainstorming
+def brain_file():
+    d = config.DATA / config.CHANNEL; d.mkdir(parents=True, exist_ok=True); return d / "brainstorming.json"
+
+
+def brain_load():
+    f = brain_file(); return json.loads(f.read_text(encoding="utf-8")) if f.exists() else None
+
+
+def brain_save(b):
+    brain_file().write_text(json.dumps(b, ensure_ascii=False, indent=1), encoding="utf-8")
+
+
+def brain_close():
+    brain_file().unlink(missing_ok=True)
+
+
+def do_brainstorm(ep, text, log):
+    b = brain_load() or {"history": [], "started": datetime.datetime.now().isoformat(timespec="seconds")}
+    b["history"].append({"chi": "simone", "testo": text})
+    out, usage, cost = writer.brainstorm(b["history"])
+    costs.record(tipo="brainstorming", servizio="openai", modello=config.OPENAI_MODEL, costo_usd=cost, esito="ok", note=json.dumps(usage))
+    b["history"].append({"chi": "autore", "testo": f"{out['risposta']}\n[pacchetto] {out['titolo']}: {out['descrizione']}"})
+    b["pack"] = {"titolo": out["titolo"], "descrizione": out["descrizione"]}; brain_save(b)
+    telegram.send(f"{telegram.esc(out['risposta'])}\n\n📦 <b>{telegram.esc(out['titolo'])}</b>\n{telegram.esc(out['descrizione'])}\n\n"
+                  "<i>Scrivimi pure per correggere o aggiungere. Quando ti convince, conferma.</i>",
+                  [[{"text": "Confermo: scrivi l'episodio", "callback_data": "brain_ok|IDEA|0"},
+                    {"text": "Chiudi", "callback_data": "brain_no|IDEA|0"}]])
+    return b["pack"]
+
+
+def ideas_file():
+    d = config.DATA / config.CHANNEL; d.mkdir(parents=True, exist_ok=True); return d / "idee.json"
+
+
+def do_ideas(ep, tema, log):
+    ideas, usage, cost = writer.concepts(tema)
+    costs.record(tipo="idee", servizio="openai", modello=config.OPENAI_MODEL, costo_usd=cost, esito="ok", note=json.dumps(usage))
+    ideas_file().write_text(json.dumps({"tema": tema, "idee": ideas}, ensure_ascii=False, indent=1), encoding="utf-8")
+    lines = [f"<b>Idee{(' · ' + telegram.esc(tema)) if tema else ''}</b>"]
+    for i, it in enumerate(ideas, 1):
+        lines.append(f"\n<b>{i}. {telegram.esc(it['titolo'])}</b>\n{telegram.esc(it['descrizione'])}")
+    lines.append("\n✅ = scrivi l'episodio · 💬 = ragioniamoci sopra")
+    rows = [[{"text": f"✅ {i}", "callback_data": f"idea_ok|IDEA|{i}"}, {"text": f"💬 {i}", "callback_data": f"idea_talk|IDEA|{i}"}]
+            for i in range(1, len(ideas) + 1)]
+    rows.append([{"text": "Altre idee", "callback_data": "idea_more|IDEA|0"}])
+    telegram.send("\n".join(lines), rows)
+    return ideas
+
+
+def propose_from(titolo, descrizione):
+    ep_new = writer.next_id()
+    telegram.send(f"<b>{ep_new}</b> · scrivo la proposta da «{telegram.esc(titolo)}»…")
+    run_job("proposta", ep_new, do_propose, ep_new, f"{titolo}. {descrizione}")
+
+
 def prop_file(ep):
     d = config.DATA / config.CHANNEL / "proposals"; d.mkdir(parents=True, exist_ok=True); return d / f"{ep}.json"
 
@@ -435,7 +491,7 @@ def _tg_startup():
     lines = [f"Servizio avviato. Finale con: {'upscale fal' if config.UPSCALE_PROVIDER == 'fal' else 'Seedance 1080p'}."]
     lines.append("Riprendo: " + ", ".join(resumed) if resumed else "Nessun lavoro in corso.")
     if lost: lines.append("Interrotte dal riavvio, da rilanciare: " + ", ".join(lost) + " (usa /bozza).")
-    lines.append("Comandi: /episodi · /nuovo idea · /modifica EP0xx correzione · /bozza EP0xx · /upscale EP0xx · /annulla EP0xx · /stato EP0xx · /programma EP0xx 20/10 17:30 · /costi")
+    lines.append("Comandi: /episodi · /nuovo idea · /idee · /brainstorming · /modifica EP0xx correzione · /bozza EP0xx · /upscale EP0xx · /annulla EP0xx · /stato EP0xx · /programma EP0xx 20/10 17:30 · /costi")
     try:
         if telegram.enabled(): threading.Thread(target=telegram.send, args=("\n".join(lines),), daemon=True).start()
     except Exception as e:
@@ -481,6 +537,23 @@ async def telegram_webhook(request: Request, x_telegram_bot_api_secret_token: st
         elif action == "draft": run_job("draft", ep, do_draft, ep)
         elif action == "schedule": run_job("schedule", ep, do_schedule, ep, take, None, None)
         elif action == "noop": telegram.send(f"Ok, {ep} resta pronto senza programmazione.")
+        elif action == "brain_ok":
+            b = brain_load()
+            if not b or not b.get("pack"): telegram.send("Nessun brainstorming aperto.")
+            else: brain_close(); propose_from(b["pack"]["titolo"], b["pack"]["descrizione"])
+        elif action == "brain_no":
+            brain_close(); telegram.send("Brainstorming chiuso.")
+        elif action in ("idea_ok", "idea_talk", "idea_more"):
+            data = json.loads(ideas_file().read_text(encoding="utf-8")) if ideas_file().exists() else {"idee": [], "tema": ""}
+            if action == "idea_more": run_job("idee", "IDEE", do_ideas, "IDEE", data.get("tema", ""))
+            elif not 0 < take <= len(data["idee"]): telegram.send("Idea non trovata: rilancia /idee")
+            else:
+                it = data["idee"][take - 1]
+                if action == "idea_ok": propose_from(it["titolo"], it["descrizione"])
+                else:
+                    brain_close(); telegram.send(f"Ragioniamo su «{telegram.esc(it['titolo'])}»…")
+                    run_job("brainstorming", "IDEA", do_brainstorm, "IDEA",
+                            f"Partiamo da questa idea: {it['titolo']}. {it['descrizione']} Dimmi come la renderesti più forte.")
         elif action == "cmd_upscale":
             try: start_upscale(ep)
             except Exception as e: telegram.send(f"⚠️ {telegram.esc(e)}")
@@ -514,9 +587,14 @@ async def telegram_webhook(request: Request, x_telegram_bot_api_secret_token: st
         return {"ok": True}
     m = u.get("message") or {}; chat = str((m.get("chat") or {}).get("id", "")); text = (m.get("text") or "").strip()
     if not text: return {"ok": True}
-    if text.startswith("/id") or text.startswith("/start"):
+    if text.split()[0].lower().split("@")[0] in ("/id", "/start"):      # esatto: "/idee" non deve finire qui
         telegram.send(f"Il tuo chat id è <code>{chat}</code>", chat=chat); return {"ok": True}
     if chat != str(telegram.CHAT): return {"ok": True}
+    if not text.startswith("/"):
+        if brain_load() is not None: run_job("brainstorming", "IDEA", do_brainstorm, "IDEA", text)
+        else: telegram.send("Per ragionare su un'idea scrivi <code>/brainstorming</code> seguito dall'idea, anche abbozzata. "
+                            "Per idee già pronte: <code>/idee</code> (oppure <code>/idee colori</code>).")
+        return {"ok": True}
     parts = text.split(); cmd = parts[0].lower().split("@")[0]; arg = parts[1].upper() if len(parts) > 1 else ""
     needs_ep = {"/bozza": "/bozza EP027", "/upscale": "/upscale EP028  (oppure /upscale EP028 2 per la take 2)",
                 "/stato": "/stato EP027", "/annulla": "/annulla EP027", "/modifica": "/modifica EP027 correzione",
@@ -547,6 +625,17 @@ async def telegram_webhook(request: Request, x_telegram_bot_api_secret_token: st
             episodes.request_for(arg)
             telegram.send(f"<b>{arg}</b> · preparo la modifica…")
             run_job("proposta", arg, do_revise, arg, change)
+        elif cmd == "/brainstorming":
+            idea = text.split(maxsplit=1)[1] if len(parts) > 1 else ""
+            brain_close(); brain_save({"history": [], "started": datetime.datetime.now().isoformat(timespec="seconds")})
+            if idea: run_job("brainstorming", "IDEA", do_brainstorm, "IDEA", idea)
+            else: telegram.send("Raccontami l'idea, anche abbozzata: scrivi pure senza comandi. "
+                                "Ti rispondo con titolo e descrizione da confermare. Chiudi con /fine.")
+        elif cmd == "/fine":
+            brain_close(); telegram.send("Brainstorming chiuso.")
+        elif cmd == "/idee":
+            tema = text.split(maxsplit=1)[1] if len(parts) > 1 else ""
+            telegram.send("Cerco idee nuove…"); run_job("idee", "IDEE", do_ideas, "IDEE", tema)
         elif cmd == "/nuovo":
             idea = text.split(maxsplit=1)[1] if len(parts) > 1 else ""
             if not idea: raise RuntimeError("Scrivi l'idea dopo il comando, es. /nuovo pozzanghere colorate su Marte")
@@ -579,7 +668,7 @@ async def telegram_webhook(request: Request, x_telegram_bot_api_secret_token: st
             rows = costs.rows(); tot = sum(float(r.get("costo_usd") or 0) for r in rows)
             telegram.send(f"Spese registrate sul servizio: <b>${tot:.2f}</b> ({len(rows)} voci)")
         else:
-            telegram.send("Comandi:\n/episodi — elenco episodi\n/nuovo idea — propone un episodio nuovo\n/bozza EP027 — genera la bozza\n/upscale EP027 — prova l'upscale fal della bozza (take: /upscale EP027 2)\n/annulla EP027 — esce dalla produzione dell'episodio\n/modifica EP027 correzione — corregge l'episodio e rifà la bozza\n/stato EP027 — stato\n/programma EP026 20/10 17:30 — programma su Buffer (ora italiana)\n/programma EP026 coda — mette in coda Buffer\n/costi — spese\n/id — chat id")
+            telegram.send("Comandi:\n/episodi — elenco episodi\n/nuovo idea — propone un episodio nuovo\n/idee tema — 5 idee pronte, ispirate agli episodi esistenti\n/brainstorming idea — ragioniamo insieme su un'idea abbozzata (chiudi con /fine)\n/bozza EP027 — genera la bozza\n/upscale EP027 — prova l'upscale fal della bozza (take: /upscale EP027 2)\n/annulla EP027 — esce dalla produzione dell'episodio\n/modifica EP027 correzione — corregge l'episodio e rifà la bozza\n/stato EP027 — stato\n/programma EP026 20/10 17:30 — programma su Buffer (ora italiana)\n/programma EP026 coda — mette in coda Buffer\n/costi — spese\n/id — chat id")
     except Exception as e:
         telegram.send(f"⚠️ {telegram.esc(e)}")
     return {"ok": True}
