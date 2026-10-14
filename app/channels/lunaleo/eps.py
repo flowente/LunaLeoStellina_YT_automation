@@ -317,6 +317,99 @@ EPISODES = {
   desc_en="Stella drops big paint drops on a white Mars rock: red and yellow make orange, yellow and blue make green! 🎨 ⭐",
   cover_s=8.8,
  ),
+ "EP030": dict(
+  title="Il razzo delle palline", slug="il_razzo_delle_palline", duration=12, cast=["luna", "leo", "stellina"], world="mars_A",
+  goal="Colori rosso, blu, giallo (spunto: 'Color Balls Machine'). Dal portellone del razzo escono palline giganti una alla volta; i bambini le prendono e le abbracciano. Loop: le palline rientrano nel razzo.",
+  framing=("FRAMING: medium shot, the SAME framing from the very first frame to the last (no zoom, no push-in). Luna stands on the LEFT and Leo on the RIGHT, their full bodies fill about 40% of the frame height, feet at about 18% from the bottom edge. "
+           "Behind them on the LEFT stands the white rocket with a small round hatch near its base, at the children's height. "
+           "STELLINA floats between the children, just above their helmets."),
+  action=[
+   "0-1s: Luna and Leo already bounce on the spot, looking at the rocket hatch with excited faces; STELLINA glows and the round hatch starts to open.",
+   "1-4s: a BIG glossy solid RED ball, as big as a beach ball, rolls out of the hatch and bounces softly across the sand to Luna; she catches it and hugs it with a giggle.",
+   "4-7s: a BIG glossy solid BLUE ball rolls out of the hatch and bounces softly to Leo; he catches it and hugs it, laughing.",
+   "7-10s: a BIG glossy solid YELLOW ball rolls out and stops between them; Luna and Leo put down their balls and lift the yellow ball together, cheering.",
+   "10-12s: STELLINA does one gentle spin: the three balls roll back together into the hatch, which closes; Luna and Leo bounce on the spot looking at the hatch, exactly as at the very beginning.",
+  ],
+  rules=("RULES: always exactly three characters: Luna, Leo and STELLINA, only ONE STELLINA; STELLINA never changes color and never has arms. Exactly three balls, all the same size, perfectly round and smooth: red, blue, yellow, in this order, never more, "
+         "and they never change color. Only ONE ball comes out at a time. Luna gets ONLY the red ball, Leo ONLY the blue ball, the yellow one is "
+         "lifted together. The rocket never moves; only its small round hatch opens and closes. "),
+  audio="AUDIO: an original bouncy synth-pop and xylophone melody, 108 bpm; a playful 'pop' when the hatch opens, a soft 'boing' and a bright note for each ball (different for red, blue and yellow), children's giggles and a cheer, a sparkly shimmer when STELLINA spins; the music ends on the same note and phrase it starts with, so the video loops seamlessly.",
+  title_it="Il razzo delle palline! 🔴🔵🟡 Che colore esce? Con Luna e Leo ⭐ | Colori per bambini #shorts",
+  title_en="The Ball Rocket! 🔴🔵🟡 Which Color Comes Out? With Luna and Leo ⭐ | Colors for Toddlers #shorts",
+  desc_it="Dal razzo escono palline giganti: rossa per Luna, blu per Leo e gialla per tutti e due! Che colore uscirà? 🔴🔵🟡 ⭐",
+  desc_en="Giant balls roll out of the rocket: red for Luna, blue for Leo and yellow for both of them! Which color comes next? 🔴🔵🟡 ⭐",
+  cover_s=8.5,
+ ),
+ "EP031": dict(
+  title="Le sfere sorpresa di Stellina", slug="le_sfere_sorpresa", duration=12, cast=["luna", "leo", "stellina"], world="mars_B",
+  goal="Colori verde, viola, arancione (spunto: 'Surprise Balls'). Tre grandi sfere bianche: Stellina ci passa sopra, la sfera si apre a metà e dentro c'è una pallina colorata. Loop: le sfere si richiudono.",
+  framing=("FRAMING: medium shot, the SAME framing from the very first frame to the last (no zoom, no push-in). Luna stands on the LEFT and Leo on the RIGHT, their full bodies fill about 40% of the frame height, feet at about 18% from the bottom edge. "
+           "On the sand in front of them, in a row, stand three BIG smooth WHITE spheres, each as tall as the children's knees: "
+           "one on the left, one in the middle, one on the right. STELLINA floats above the middle sphere."),
+  action=[
+   "0-1s: Luna and Leo already lean towards the three white spheres with curious faces; STELLINA bounces above them, glowing.",
+   "1-4s: STELLINA floats over the LEFT sphere and glows brightly: the sphere splits open in two halves like an egg and inside there is a glossy solid GREEN ball; Luna gasps and claps.",
+   "4-7s: STELLINA floats over the RIGHT sphere and glows: it opens in two halves and inside there is a glossy solid PURPLE ball; Leo jumps with joy.",
+   "7-10s: STELLINA floats over the MIDDLE sphere and glows: it opens and inside there is a glossy solid ORANGE ball; Luna and Leo hold hands and cheer.",
+   "10-12s: STELLINA does one gentle spin: the three spheres close again, smooth and white, exactly as at the very beginning; Luna and Leo lean towards them with curious faces.",
+  ],
+  rules=("RULES: always exactly three characters: Luna, Leo and STELLINA, only ONE STELLINA; STELLINA never changes color and never has arms. Exactly three white spheres that never move: left, middle, right. STELLINA opens them only by glowing above them, "
+         "never by touching. Left = GREEN ball, right = PURPLE ball, middle = ORANGE ball, each ball stays inside its sphere and never changes color. "
+         "Only one sphere opens at a time. The children never touch the spheres. "),
+  audio="AUDIO: an original gentle music-box and marimba melody, 100 bpm; a magical rising chime before each sphere opens, a soft 'pop' and a bright note for each color (different for green, purple and orange), children's 'ooh!' and giggles, a sparkly shimmer when the spheres close; the music ends on the same note and phrase it starts with, so the video loops seamlessly.",
+  title_it="Le sfere sorpresa! 🟢🟣🟠 Cosa c'è dentro? Con Stellina ⭐ | Colori per bambini #shorts",
+  title_en="Surprise Spheres! 🟢🟣🟠 What's Inside? With Stella ⭐ | Colors for Toddlers #shorts",
+  desc_it="Stellina apre tre sfere bianche magiche: dentro c'è una pallina verde, una viola e una arancione! Indovini il colore? 🟢🟣🟠 ⭐",
+  desc_en="Stella opens three magic white spheres: inside there's a green, a purple and an orange ball! Can you guess the color? 🟢🟣🟠 ⭐",
+  cover_s=5.5,
+ ),
+ "EP032": dict(
+  title="La torre di sassi colorati", slug="la_torre_di_sassi", duration=12, cast=["luna", "leo", "stellina"], world="mars_B",
+  goal="Colori rosso, blu, giallo + ordine e impilare (spunto: 'Color Stack Rings'). Luna e Leo impilano tre grandi sassi piatti, Stellina fa brillare la torre. Loop: la torre si smonta saltellando.",
+  framing=("FRAMING: medium shot, the SAME framing from the very first frame to the last (no zoom, no push-in). Luna stands on the LEFT and Leo on the RIGHT, their full bodies fill about 40% of the frame height, feet at about 18% from the bottom edge. "
+           "Between them, in the lower middle of the frame, there is a flat spot on the sand; next to Luna lies a BIG flat round RED stone, "
+           "next to Leo a medium flat round BLUE stone, and a small flat round YELLOW stone lies in front of them. STELLINA floats above the flat spot."),
+  action=[
+   "0-1s: Luna and Leo already crouch next to their stones with happy faces; STELLINA bounces above the empty flat spot.",
+   "1-4s: Luna lifts the BIG RED stone and places it on the flat spot; it lands with a soft 'thud'; she claps.",
+   "4-7s: Leo lifts the medium BLUE stone and places it on top of the red one; the tower wobbles a little and stays; he giggles.",
+   "7-10s: Luna and Leo lift the small YELLOW stone together and place it on top; STELLINA glows and the whole three-stone tower shines softly; they cheer.",
+   "10-12s: STELLINA does one gentle spin: the three stones hop off one by one, light and bouncy, back to their places next to the children, exactly as at the very beginning; Luna and Leo crouch next to them.",
+  ],
+  rules=("RULES: always exactly three characters: Luna, Leo and STELLINA, only ONE STELLINA; STELLINA never changes color and never has arms. Exactly three flat round stones, solid opaque colors: BIG RED at the bottom, medium BLUE in the middle, small YELLOW on top; "
+         "the order never changes and the stones never change color or size. Luna places the red one, Leo the blue one, both together the yellow one. "
+         "The tower never falls. "),
+  audio="AUDIO: an original cheerful ukulele and wood-block melody, 104 bpm; a soft wooden 'thud' and a rising note for each stone (low for red, middle for blue, high for yellow), a little wobble sound, children's giggles and a cheer, a sparkly shimmer when the tower shines; the music ends on the same note and phrase it starts with, so the video loops seamlessly.",
+  title_it="La torre di sassi colorati! 🔴🔵🟡 Costruiamo con Luna e Leo ⭐ | Colori per bambini #shorts",
+  title_en="The Colorful Stone Tower! 🔴🔵🟡 Let's Build with Luna and Leo ⭐ | Colors for Toddlers #shorts",
+  desc_it="Rosso grande, blu medio, giallo piccolo: Luna e Leo costruiscono una torre di sassi su Marte e Stellina la fa brillare! 🔴🔵🟡 ⭐",
+  desc_en="Big red, medium blue, small yellow: Luna and Leo build a stone tower on Mars and Stella makes it shine! 🔴🔵🟡 ⭐",
+  cover_s=9.0,
+ ),
+ "EP033": dict(
+  title="Biglie giù dalla duna", slug="biglie_giu_dalla_duna", duration=12, cast=["luna", "leo", "stellina"], world="mars_B",
+  goal="Colori + smistare (spunto: 'Marble Maze Run'). Tre biglie giganti rotolano giù dalla duna e ognuna si ferma nel cratere del suo colore. Loop: le biglie risalgono.",
+  framing=("FRAMING: medium shot, the SAME framing from the very first frame to the last (no zoom, no push-in). Luna stands on the LEFT and Leo on the RIGHT, their full bodies fill about 40% of the frame height, feet at about 18% from the bottom edge. "
+           "Behind them a smooth sand dune slopes down from the upper RIGHT to the lower LEFT. In front of the children, on the sand, "
+           "there are three small shallow round craters in a row, each with a solid colored rim: RED rim on the left, YELLOW rim in the middle, "
+           "BLUE rim on the right. STELLINA floats at the top of the dune."),
+  action=[
+   "0-1s: Luna and Leo already point at the top of the dune with excited faces; STELLINA glows there and a BIG glossy solid RED marble appears next to her.",
+   "1-4s: the RED marble rolls down the dune, slowly and smoothly, and drops into the crater with the RED rim; Luna claps and cheers.",
+   "4-7s: a BIG glossy solid BLUE marble rolls down the dune and drops into the crater with the BLUE rim; Leo jumps and claps.",
+   "7-10s: a BIG glossy solid YELLOW marble rolls down and drops into the crater with the YELLOW rim in the middle; Luna and Leo hold hands and cheer.",
+   "10-12s: STELLINA does one gentle spin: the three marbles float gently back up to the top of the dune and disappear in a sparkle; Luna and Leo point at the top of the dune, exactly as at the very beginning.",
+  ],
+  rules=("RULES: always exactly three characters: Luna, Leo and STELLINA, only ONE STELLINA; STELLINA never changes color and never has arms. Exactly three marbles as big as melons, solid opaque colors: red, blue, yellow, in this order, only ONE rolling at a time. "
+         "Each marble always stops in the crater with the rim of the SAME color: red in red, blue in blue, yellow in yellow. "
+         "The craters never move and never change color. The children never touch the marbles. "),
+  audio="AUDIO: an original playful glockenspiel and pizzicato melody, 102 bpm; a soft rolling rumble down the dune, a 'plop' and a bright note when each marble lands (different for red, blue and yellow), children's cheers and giggles, a sparkly shimmer when the marbles float back up; the music ends on the same note and phrase it starts with, so the video loops seamlessly.",
+  title_it="Biglie giù dalla duna! 🔴🔵🟡 Ogni colore a casa sua ⭐ | Colori per bambini #shorts",
+  title_en="Marbles Down the Dune! 🔴🔵🟡 Every Color Finds Its Home ⭐ | Colors for Toddlers #shorts",
+  desc_it="Tre biglie giganti rotolano giù dalla duna di Marte e ognuna trova il cratere del suo colore: rosso, blu e giallo! 🔴🔵🟡 ⭐",
+  desc_en="Three giant marbles roll down the Mars dune and each one finds the crater of its color: red, blue and yellow! 🔴🔵🟡 ⭐",
+  cover_s=9.0,
+ ),
  "EP025": dict(
   title="Ciao, sono Stellina!", slug="ciao_sono_stellina", duration=12, cast=["luna", "leo", "stellina"], world="mars_B",
   goal="Presentazione di Stellina (formato 'Ciao!'): i suoi tre poteri — luce che respira, scia di scintille, giravolta — poi arrivano Luna e Leo.",
