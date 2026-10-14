@@ -53,7 +53,7 @@ COMMANDS = [("episodi", "Elenco episodi"), ("nuovo", "Propone un episodio nuovo:
             ("bozza", "Genera la bozza: /bozza EP027"), ("upscale", "Prova l'upscale fal: /upscale EP027"),
             ("modifica", "Corregge un episodio: /modifica EP027 correzione"), ("stato", "Stato: /stato EP027"),
             ("programma", "Buffer: /programma EP027 20/10 17:30 oppure coda"), ("annulla", "Esce dalla produzione: /annulla EP027"),
-            ("costi", "Spese registrate"), ("id", "Mostra il chat id")]
+            ("costi", "Spese per settimana ed episodio"), ("id", "Mostra il chat id")]
 
 
 def set_commands():

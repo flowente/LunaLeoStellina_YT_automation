@@ -295,8 +295,13 @@ def do_schedule(ep, take, due_at, mode, log):
 
 # ------------------------------------------------------------------ API
 @app.get("/health")
+def volume_ok():
+    """Il volume Railway è montato su DATA_DIR? Senza volume stato episodi e registro costi spariscono a ogni deploy."""
+    return os.path.ismount(config.DATA)
+
+
 def health():
-    return {"ok": True, "channel": config.CHANNEL,
+    return {"ok": True, "channel": config.CHANNEL, "volume_data_montato": volume_ok(),
             "upscale_provider": config.UPSCALE_PROVIDER,
             "keys": {**{k: bool(getattr(config, k)) for k in ("KIE_API_KEY", "OPENAI_API_KEY", "SUPABASE_KEY", "BUFFER_API_KEY", "N8N_WEBHOOK_URL", "FAL_KEY")},
                      "TELEGRAM_BOT_TOKEN": bool(telegram.TOKEN), "TELEGRAM_CHAT_ID": bool(telegram.CHAT)}}
@@ -489,6 +494,9 @@ def _tg_startup():
             if str(int(take)) not in st["takes"] and not st.get("pending") and not flag.exists():
                 lost.append(f"{d.name} take {int(take)}"); flag.write_text("segnalata")
     lines = [f"Servizio avviato. Finale con: {'upscale fal' if config.UPSCALE_PROVIDER == 'fal' else 'Seedance 1080p'}."]
+    lines.append(f"Volume {config.DATA}: montato ✔" if volume_ok() else
+                 f"⚠️ Volume {config.DATA} NON montato: stato degli episodi e registro costi si perdono a ogni deploy. "
+                 "Railway → servizio → tasto destro / ⋮ → Attach Volume → mount path /data")
     lines.append("Riprendo: " + ", ".join(resumed) if resumed else "Nessun lavoro in corso.")
     if lost: lines.append("Interrotte dal riavvio, da rilanciare: " + ", ".join(lost) + " (usa /bozza).")
     lines.append("Comandi: /episodi · /nuovo idea · /idee · /brainstorming · /modifica EP0xx correzione · /bozza EP0xx · /upscale EP0xx · /annulla EP0xx · /stato EP0xx · /programma EP0xx 20/10 17:30 · /costi")
@@ -665,10 +673,9 @@ async def telegram_webhook(request: Request, x_telegram_bot_api_secret_token: st
             _, eps = episodes.all_episodes()
             telegram.send("\n".join(f"{k} · {v['title']} ({v['duration']}s) · take {len(state(k)['takes'])}" for k, v in sorted(eps.items())))
         elif cmd == "/costi":
-            rows = costs.rows(); tot = sum(float(r.get("costo_usd") or 0) for r in rows)
-            telegram.send(f"Spese registrate sul servizio: <b>${tot:.2f}</b> ({len(rows)} voci)")
+            telegram.send(costs.report(arg or None))
         else:
-            telegram.send("Comandi:\n/episodi — elenco episodi\n/nuovo idea — propone un episodio nuovo\n/idee tema — 5 idee pronte, ispirate agli episodi esistenti\n/brainstorming idea — ragioniamo insieme su un'idea abbozzata (chiudi con /fine)\n/bozza EP027 — genera la bozza\n/upscale EP027 — prova l'upscale fal della bozza (take: /upscale EP027 2)\n/annulla EP027 — esce dalla produzione dell'episodio\n/modifica EP027 correzione — corregge l'episodio e rifà la bozza\n/stato EP027 — stato\n/programma EP026 20/10 17:30 — programma su Buffer (ora italiana)\n/programma EP026 coda — mette in coda Buffer\n/costi — spese\n/id — chat id")
+            telegram.send("Comandi:\n/episodi — elenco episodi\n/nuovo idea — propone un episodio nuovo\n/idee tema — 5 idee pronte, ispirate agli episodi esistenti\n/brainstorming idea — ragioniamo insieme su un'idea abbozzata (chiudi con /fine)\n/bozza EP027 — genera la bozza\n/upscale EP027 — prova l'upscale fal della bozza (take: /upscale EP027 2)\n/annulla EP027 — esce dalla produzione dell'episodio\n/modifica EP027 correzione — corregge l'episodio e rifà la bozza\n/stato EP027 — stato\n/programma EP026 20/10 17:30 — programma su Buffer (ora italiana)\n/programma EP026 coda — mette in coda Buffer\n/costi — spese della settimana per episodio (/costi EP028 per il dettaglio)\n/id — chat id")
     except Exception as e:
         telegram.send(f"⚠️ {telegram.esc(e)}")
     return {"ok": True}
