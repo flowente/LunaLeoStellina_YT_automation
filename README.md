@@ -34,12 +34,32 @@ Sono nel codice: `app/channels/lunaleo/channel.json` ed `eps.py`.
 - Prima sempre la bozza 480p. Il 1080p si fa solo dopo l'ok di Simone.
 - Durata di default 12 s.
 
+## Upscale con fal.ai (in prova)
+
+Strada alternativa al 1080p di Seedance: la bozza 480p approvata passa da **SeedVR2 su fal.ai** e diventa 1080×1920.
+Costo ≈ $0,55 a short invece di $9,48 (test su EP028: nitidezza vicina al nativo, struttura identica alla bozza).
+
+Passaggi:
+1. il servizio carica la bozza **grezza** su Supabase (fal vuole un link pubblico);
+2. fal la porta a 1080p (modalità `target`, noise 0,05, seed fisso);
+3. correzione `UPSCALE_FIX_VF` prima del grade: saturazione 0,86 (il 480p di Seedance nasce più saturo del 1080p) e un leggero filtro temporale contro il "brulichio" del dettaglio ricostruito;
+4. audio originale della bozza, poi `postprod.finalize` come sempre (grade del canale, loop, overlay, −14 LUFS);
+5. confronto strutturale con la bozza: segnala i secondi in cui l'upscale ha cambiato forme o volti;
+6. costo registrato in `/costs` (servizio `fal`).
+
+**Interruttore** `UPSCALE_PROVIDER` (variabile di Railway):
+- `seedance` (default): "Approva" fa come prima, 1080p rigenerato da Seedance.
+- `fal`: "Approva" usa l'upscale. Per tornare indietro basta rimettere `seedance`.
+
+Il comando `/upscale EP028` (oppure `/upscale EP028 2` per una take precisa) usa **sempre** fal, anche con l'interruttore su `seedance`: è la prova. Il risultato arriva su Telegram con il pulsante **Usa come finale**, che lo mette al posto del finale Seedance (quello vecchio resta annotato nello stato).
+
 ## Telegram
 
 Il bot manda ogni bozza con il giudizio e due pulsanti: **✅ Approva (1080p)** e **🔁 Rifai bozza**. Quando il finale è pronto manda il link e il pulsante **📅 Metti in coda su Buffer**.
 
 Comandi del bot:
 - `/bozza EP027`: genera la bozza dell'episodio.
+- `/upscale EP027`: prova l'upscale fal della bozza.
 - `/stato EP027`: mostra lo stato dell'episodio.
 - `/episodi`: elenca gli episodi definiti.
 - `/costi`: mostra il totale delle spese registrate.

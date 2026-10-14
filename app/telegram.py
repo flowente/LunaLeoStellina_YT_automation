@@ -3,6 +3,7 @@
 Comandi (solo dalla chat TELEGRAM_CHAT_ID):
   /nuovo idea      propone un episodio nuovo (OpenAI) con pulsanti Ok/Rifai/Annulla
   /bozza EP027      genera la bozza (con controllo)
+  /upscale EP027    prova l'upscale fal della bozza (1080p a ≈ $0,55), con pulsante "Usa come finale"
   /annulla EP027    esce dalla produzione dell'episodio
   /modifica EP027 correzione   riscrive l'episodio con la correzione (pulsanti Ok/Salva/Annulla)
   /stato EP027      stato dell'episodio

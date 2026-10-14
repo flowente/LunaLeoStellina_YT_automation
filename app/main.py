@@ -12,7 +12,7 @@ from pathlib import Path
 import requests
 from fastapi import FastAPI, Header, HTTPException, Body, Request
 from fastapi.responses import FileResponse, PlainTextResponse
-from . import config, episodes, kie, postprod, qc, judge, storage, buffer, costs, telegram, writer
+from . import config, episodes, kie, postprod, qc, judge, storage, buffer, costs, telegram, writer, upscale
 
 app = FastAPI(title="Luna Leo & Stellina — automazione short")
 JOBS: dict = {}
@@ -46,7 +46,8 @@ def notify(event, payload):
                 if payload.get("preview_url"): telegram.send_video(payload["preview_url"], txt, telegram.draft_buttons(ep, take))
                 else: telegram.send(txt, telegram.draft_buttons(ep, take))
             elif event == "final_ready":
-                telegram.send(f"<b>{ep}</b> · finale 1080p pronto (copia su Drive in corso).\n"
+                via = " · upscale fal" if payload.get("provider") == "fal" else ""
+                telegram.send(f"<b>{ep}</b> · finale 1080p pronto{via} (copia su Drive in corso).\n"
                               f'<a href="{payload["final_url"]}">Finale</a> · <a href="{payload["cover_url"]}">Copertina</a>\n\n'
                               f"<b>Titolo:</b> {telegram.esc(payload['title_it'])}\n<b>EN:</b> {telegram.esc(payload['title_en'])}",
                               telegram.final_buttons(ep, take))
@@ -141,6 +142,8 @@ def do_draft(ep, log, resume=None):
 
 
 def do_approve(ep, take, log, resume=None):
+    if config.UPSCALE_PROVIDER == "fal":            # interruttore: strada nuova (bozza + upscale fal)
+        return do_upscale(ep, take, log, as_final=True)
     E, _ = episodes.request_for(ep, draft=True); s = state(ep); t = s["takes"][str(take)]
     stem = ep_dir(ep) / "renders" / f"{ep}_take{take:02d}_1080p"
     task, raw = kie_generate(ep, take, kie.upgrade_request(t["draft_task"]), stem, "finale 1080p da bozza", log, "approve", (resume or {}).get("task"))
@@ -151,9 +154,90 @@ def do_approve(ep, take, log, resume=None):
     up = lambda p: storage.upload(p, f"{config.SUPABASE_VIDEO_PREFIX}/{config.CHANNEL}/{ep}/{p.name}")
     t.update(final_1080=final.name, final_url=up(final), cover_url=up(cover), approved=datetime.datetime.now().isoformat(timespec="seconds"))
     save_state(ep, s)
-    out = {"episode": ep, "take": take, "final_url": t["final_url"], "cover_url": t["cover_url"], "file_name": final.name, **episodes.texts(ep)}
+    out = {"episode": ep, "take": take, "final_url": t["final_url"], "cover_url": t["cover_url"], "file_name": final.name,
+           "provider": "seedance", **episodes.texts(ep)}
     notify("final_ready", out)
     return out
+
+
+def check_vs_draft(draft_final: Path, up_final: Path) -> dict:
+    """Confronto strutturale upscale vs bozza (stessa scena): trova dove l'upscaler ha cambiato forme o volti."""
+    import cv2, numpy as np
+    def frames(p):
+        c = cv2.VideoCapture(str(p)); fs = []
+        while True:
+            ok, f = c.read()
+            if not ok: break
+            fs.append(cv2.cvtColor(cv2.resize(f, (270, 480), interpolation=cv2.INTER_AREA), cv2.COLOR_BGR2GRAY).astype(np.float32))
+        return fs, c.get(cv2.CAP_PROP_FPS) or 24
+    def ssim(a, b):
+        g = lambda x: cv2.GaussianBlur(x, (7, 7), 1.5); C1, C2 = 6.5025, 58.5225
+        ma, mb = g(a), g(b); va, vb, cab = g(a * a) - ma * ma, g(b * b) - mb * mb, g(a * b) - ma * mb
+        return float((((2 * ma * mb + C1) * (2 * cab + C2)) / ((ma * ma + mb * mb + C1) * (va + vb + C2))).mean())
+    A, fps = frames(draft_final); B, _ = frames(up_final); n = min(len(A), len(B))
+    if not n: return {"esito": "non misurabile"}
+    sc = [ssim(A[i], B[i]) for i in range(0, n, 2)]
+    worst = int(np.argmin(sc)); low = [round(i * 2 / fps, 1) for i, v in enumerate(sc) if v < 0.80]
+    return {"ssim_medio": round(float(np.mean(sc)), 3), "ssim_min": round(float(sc[worst]), 3), "secondo_peggiore": round(worst * 2 / fps, 1),
+            "secondi_da_guardare": low[:10], "esito": "ok" if not low else "da guardare"}
+
+
+def do_upscale(ep, take, log, as_final=False, resume=None):
+    """Bozza 480p -> 1080p con SeedVR2 su fal. as_final=True quando lo usa "Approva" (UPSCALE_PROVIDER=fal),
+    altrimenti è una prova (/upscale): il finale Seedance, se esiste, non viene toccato."""
+    E, _ = episodes.request_for(ep, draft=True); s = state(ep); t = s["takes"][str(take)]
+    raw = ep_dir(ep) / "renders" / t["raw"]
+    if not raw.exists(): raise RuntimeError(f"bozza grezza non trovata sul volume: {raw.name}")
+    if resume:
+        job = {k: resume[k] for k in ("request_id", "status_url", "response_url")}
+        progress(ep, "upscale: riprendo la richiesta fal interrotta dal riavvio")
+    else:
+        raw_url = storage.upload(raw, f"{config.SUPABASE_VIDEO_PREFIX}/{config.CHANNEL}/{ep}/{raw.name}")
+        t["raw_url"] = raw_url; save_state(ep, s)
+        job = upscale.submit(raw_url); log(f"fal {job['request_id']}")
+        st = state(ep); st.setdefault("pending", {})["upscale"] = {**job, "take": take, "as_final": as_final}; save_state(ep, st)
+        progress(ep, f"take {take}: upscale a 1080p avviato su fal (di solito 2-5 minuti)")
+    res = upscale.wait(job, log=log)
+    stem = ep_dir(ep) / "renders" / f"{ep}_take{take:02d}_1080p_up"
+    fal_out = upscale.download(res["video"]["url"], stem.with_name(stem.name + "_fal.mp4"))
+    cost, p = upscale.cost_usd(fal_out)
+    costs.record(episodio=ep, take=take, tipo="upscale 1080p da bozza", servizio="fal", modello=config.FAL_UPSCALE_MODEL,
+                 risoluzione=f"{p['w']}x{p['h']}", durata_s=round(p["frames"] / 24, 2), costo_usd=cost, esito="ok",
+                 task_id=job["request_id"], file=fal_out.name,
+                 note=f"noise {config.FAL_UPSCALE_NOISE}, seed {config.FAL_UPSCALE_SEED}, fix {config.UPSCALE_FIX_VF}")
+    st = state(ep); st.get("pending", {}).pop("upscale", None); save_state(ep, st)
+    progress(ep, "upscale ricevuto: correzione colore, post-produzione e confronto con la bozza")
+    conformed = upscale.conform(fal_out, raw, stem.with_suffix(".mp4"))
+    final = postprod.finalize(conformed, E, episodes.channel()["post"]); log("finale upscale ok")
+    check = check_vs_draft(ep_dir(ep) / "renders" / t["final"], final) if t.get("final") else {"esito": "non misurabile"}
+    cover = postprod.frame(final, float(E.get("cover_s", 1.0)), stem.with_name(f"{ep}_copertina_up_1080x1920.png"))
+    up = lambda q: storage.upload(q, f"{config.SUPABASE_VIDEO_PREFIX}/{config.CHANNEL}/{ep}/{q.name}")
+    s = state(ep); t = s["takes"][str(take)]
+    t["upscale"] = {"file": final.name, "url": up(final), "cover_url": up(cover), "costo_usd": cost, "confronto": check,
+                    "request_id": job["request_id"], "creato": datetime.datetime.now().isoformat(timespec="seconds")}
+    if as_final: use_upscale_as_final(t)
+    save_state(ep, s)
+    out = {"episode": ep, "take": take, "final_url": t["upscale"]["url"], "cover_url": t["upscale"]["cover_url"], "file_name": final.name,
+           "provider": "fal", "costo_usd": cost, "confronto": check, **episodes.texts(ep)}
+    if as_final:
+        notify("final_ready", out)
+    else:
+        seed_note = "C'è già un finale Seedance: se usi questo, lo sostituisce." if t.get("final_url") else "Questa take non ha ancora un finale."
+        telegram.send(f"<b>{ep}</b> · PROVA upscale fal take {take} pronta · ${cost:.2f}\n"
+                      f'<a href="{out["final_url"]}">Video</a> · <a href="{out["cover_url"]}">Copertina</a>\n'
+                      f"Confronto con la bozza: {telegram.esc(check.get('esito'))} (somiglianza media {check.get('ssim_medio', '-')}, "
+                      f"minima {check.get('ssim_min', '-')} a {check.get('secondo_peggiore', '-')}s)\n{seed_note}",
+                      [[{"text": "Usa come finale", "callback_data": f"useup|{ep}|{take}"},
+                        {"text": "Non ora", "callback_data": f"noop|{ep}|{take}"}]])
+    return out
+
+
+def use_upscale_as_final(t):
+    u = t["upscale"]
+    if t.get("final_url") and not t.get("final_seedance"):        # tiene traccia del finale Seedance sostituito
+        t["final_seedance"] = {"file": t.get("final_1080"), "url": t["final_url"], "cover_url": t.get("cover_url")}
+    t.update(final_1080=u["file"], final_url=u["url"], cover_url=u["cover_url"], final_provider="fal",
+             approved=datetime.datetime.now().isoformat(timespec="seconds"))
 
 
 def do_schedule(ep, take, due_at, mode, log):
@@ -169,7 +253,8 @@ def do_schedule(ep, take, due_at, mode, log):
 @app.get("/health")
 def health():
     return {"ok": True, "channel": config.CHANNEL,
-            "keys": {**{k: bool(getattr(config, k)) for k in ("KIE_API_KEY", "OPENAI_API_KEY", "SUPABASE_KEY", "BUFFER_API_KEY", "N8N_WEBHOOK_URL")},
+            "upscale_provider": config.UPSCALE_PROVIDER,
+            "keys": {**{k: bool(getattr(config, k)) for k in ("KIE_API_KEY", "OPENAI_API_KEY", "SUPABASE_KEY", "BUFFER_API_KEY", "N8N_WEBHOOK_URL", "FAL_KEY")},
                      "TELEGRAM_BOT_TOKEN": bool(telegram.TOKEN), "TELEGRAM_CHAT_ID": bool(telegram.CHAT)}}
 
 
@@ -208,7 +293,10 @@ def schedule(ep: str, take: int, due_at: str | None = None, mode: str | None = N
 @app.post("/episodes/{ep}/cleanup")
 def cleanup(ep: str, x_token: str = Header(None)):
     auth(x_token); s = state(ep)
-    paths = [f"{config.SUPABASE_VIDEO_PREFIX}/{config.CHANNEL}/{ep}/{v[k].rsplit('/', 1)[-1]}" for v in s["takes"].values() for k in ("preview_url", "final_url", "cover_url") if v.get(k)]
+    urls = [v[k] for v in s["takes"].values() for k in ("preview_url", "final_url", "cover_url", "raw_url") if v.get(k)]
+    urls += [v["upscale"][k] for v in s["takes"].values() if v.get("upscale") for k in ("url", "cover_url") if v["upscale"].get(k)]
+    urls += [v["final_seedance"][k] for v in s["takes"].values() if v.get("final_seedance") for k in ("url", "cover_url") if v["final_seedance"].get(k)]
+    paths = sorted({f"{config.SUPABASE_VIDEO_PREFIX}/{config.CHANNEL}/{ep}/{u.rsplit('/', 1)[-1]}" for u in urls})
     return storage.delete(paths) if paths else {"deleted": []}
 
 
@@ -300,10 +388,10 @@ def _tg_startup():
             flag = rq.with_name(rq.name.replace(".request.json", ".interrotta"))
             if str(int(take)) not in st["takes"] and not st.get("pending") and not flag.exists():
                 lost.append(f"{d.name} take {int(take)}"); flag.write_text("segnalata")
-    lines = ["Servizio avviato."]
+    lines = [f"Servizio avviato. Finale con: {'upscale fal' if config.UPSCALE_PROVIDER == 'fal' else 'Seedance 1080p'}."]
     lines.append("Riprendo: " + ", ".join(resumed) if resumed else "Nessun lavoro in corso.")
     if lost: lines.append("Interrotte dal riavvio, da rilanciare: " + ", ".join(lost) + " (usa /bozza).")
-    lines.append("Comandi: /episodi · /nuovo idea · /modifica EP0xx correzione · /bozza EP0xx · /annulla EP0xx · /stato EP0xx · /programma EP0xx 20/10 17:30 · /costi")
+    lines.append("Comandi: /episodi · /nuovo idea · /modifica EP0xx correzione · /bozza EP0xx · /upscale EP0xx · /annulla EP0xx · /stato EP0xx · /programma EP0xx 20/10 17:30 · /costi")
     try:
         if telegram.enabled(): threading.Thread(target=telegram.send, args=("\n".join(lines),), daemon=True).start()
     except Exception as e:
@@ -316,6 +404,7 @@ def _tg_startup():
             for kind, p in (st.get("pending") or {}).items():
                 if kind == "draft": run_job("draft", ep, do_draft, ep, resume=p)
                 elif kind == "approve": run_job("approve", ep, do_approve, ep, p["take"], resume=p)
+                elif kind == "upscale": run_job("upscale", ep, do_upscale, ep, p["take"], as_final=p.get("as_final", False), resume=p)
         except Exception as e:
             print("ripresa non riuscita:", f, e)
 
@@ -348,6 +437,14 @@ async def telegram_webhook(request: Request, x_telegram_bot_api_secret_token: st
         elif action == "draft": run_job("draft", ep, do_draft, ep)
         elif action == "schedule": run_job("schedule", ep, do_schedule, ep, take, None, None)
         elif action == "noop": telegram.send(f"Ok, {ep} resta pronto senza programmazione.")
+        elif action == "useup":
+            s = state(ep); t = s["takes"][str(take)]
+            if not t.get("upscale"): telegram.send(f"<b>{ep}</b> · nessun upscale per la take {take}")
+            else:
+                use_upscale_as_final(t); save_state(ep, s)
+                telegram.send(f"<b>{ep}</b> · finale = upscale fal (take {take}).\n"
+                              f'<a href="{t["final_url"]}">Finale</a> · <a href="{t["cover_url"]}">Copertina</a>',
+                              telegram.final_buttons(ep, take))
         elif action == "abort": abort(ep)
         elif action == "nuovo_ok":
             pr = json.loads(prop_file(ep).read_text(encoding="utf-8")); sp = dict(pr["spec"]); sp.pop("riassunto_it", None)
@@ -372,10 +469,20 @@ async def telegram_webhook(request: Request, x_telegram_bot_api_secret_token: st
     try:
         if cmd == "/bozza" and arg:
             episodes.request_for(arg); run_job("draft", arg, do_draft, arg)
+        elif cmd == "/upscale" and arg:
+            # /upscale EP028   (ultima take)   oppure   /upscale EP028 2
+            st = state(arg)
+            if not st["takes"]: raise RuntimeError(f"{arg} non ha ancora bozze")
+            take = int(parts[2]) if len(parts) > 2 and parts[2].isdigit() else int(sorted(st["takes"], key=int)[-1])
+            if str(take) not in st["takes"]: raise RuntimeError(f"{arg} non ha la take {take}")
+            if not config.FAL_KEY: raise RuntimeError("FAL_KEY non impostata nelle variabili di Railway")
+            run_job("upscale", arg, do_upscale, arg, take, as_final=False)
         elif cmd == "/stato" and arg:
             st = state(arg)
             telegram.send(f"<b>{arg}</b>: {len(st['takes'])} take\n" + "\n".join(
                 f"take {k}: {(v.get('verdict') or {}).get('verdetto', '-')}{' · finale pronto' if v.get('final_url') else ''}"
+                f"{' (upscale fal)' if v.get('final_provider') == 'fal' else ''}"
+                f"{' · prova upscale' if v.get('upscale') and v.get('final_provider') != 'fal' else ''}"
                 f"{' · programmato' if v.get('buffer_post') else ''}" for k, v in st["takes"].items()))
         elif cmd == "/annulla" and arg:
             abort(arg)
@@ -417,7 +524,7 @@ async def telegram_webhook(request: Request, x_telegram_bot_api_secret_token: st
             rows = costs.rows(); tot = sum(float(r.get("costo_usd") or 0) for r in rows)
             telegram.send(f"Spese registrate sul servizio: <b>${tot:.2f}</b> ({len(rows)} voci)")
         else:
-            telegram.send("Comandi:\n/episodi — elenco episodi\n/nuovo idea — propone un episodio nuovo\n/bozza EP027 — genera la bozza\n/annulla EP027 — esce dalla produzione dell'episodio\n/modifica EP027 correzione — corregge l'episodio e rifà la bozza\n/stato EP027 — stato\n/programma EP026 20/10 17:30 — programma su Buffer (ora italiana)\n/programma EP026 coda — mette in coda Buffer\n/costi — spese\n/id — chat id")
+            telegram.send("Comandi:\n/episodi — elenco episodi\n/nuovo idea — propone un episodio nuovo\n/bozza EP027 — genera la bozza\n/upscale EP027 — prova l'upscale fal della bozza (take: /upscale EP027 2)\n/annulla EP027 — esce dalla produzione dell'episodio\n/modifica EP027 correzione — corregge l'episodio e rifà la bozza\n/stato EP027 — stato\n/programma EP026 20/10 17:30 — programma su Buffer (ora italiana)\n/programma EP026 coda — mette in coda Buffer\n/costi — spese\n/id — chat id")
     except Exception as e:
         telegram.send(f"⚠️ {telegram.esc(e)}")
     return {"ok": True}

@@ -44,6 +44,22 @@ SUPABASE_VIDEO_PREFIX = env("SUPABASE_VIDEO_PREFIX", "video")              # car
 BUFFER_API_KEY = env("BUFFER_API_KEY", "")
 BUFFER_API_URL = env("BUFFER_API_URL", "https://api.buffer.com")
 
+# Upscale del finale. "Approva" usa:
+#   UPSCALE_PROVIDER=seedance -> come prima: Seedance rigenera la take a 1080p (≈ $0,79/s)
+#   UPSCALE_PROVIDER=fal      -> la bozza 480p approvata passa da SeedVR2 su fal.ai (≈ $0,001 per megapixel)
+# Il comando /upscale usa sempre fal (per provare la strada nuova senza toccare "Approva").
+UPSCALE_PROVIDER = (env("UPSCALE_PROVIDER", "seedance") or "seedance").lower()
+FAL_KEY = env("FAL_KEY", "")
+FAL_UPSCALE_MODEL = env("FAL_UPSCALE_MODEL", "fal-ai/seedvr/upscale/video")
+FAL_UPSCALE_TARGET = env("FAL_UPSCALE_TARGET", "1080p")
+FAL_UPSCALE_NOISE = _num(env("FAL_UPSCALE_NOISE", "0.05"))
+FAL_UPSCALE_SEED = int(_num(env("FAL_UPSCALE_SEED", "42")))
+FAL_PRICE_PER_MP = _num(env("FAL_PRICE_PER_MP", "0.001"))
+# Correzione applicata al video upscalato PRIMA del color grade del canale (tarata su EP028, 14/10/2026):
+#   il 480p di Seedance nasce più saturo del 1080p (+9%) -> saturazione 0,86;
+#   il dettaglio ricostruito "brulica" tra i fotogrammi -> leggero filtro temporale (hqdn3d, solo tempo).
+UPSCALE_FIX_VF = env("UPSCALE_FIX_VF", "eq=saturation=0.86,hqdn3d=0:0:4:4")
+
 # n8n: dove il servizio avvisa quando un lavoro finisce (report bozza, finale pronto, post programmato)
 N8N_WEBHOOK_URL = env("N8N_WEBHOOK_URL", "")
 
