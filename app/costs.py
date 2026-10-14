@@ -115,6 +115,6 @@ def report(ep: str | None = None) -> str:
     est = [r for r in rs if r.get("esito") == "stima"]
     if est: lines.append(f"<i>{len(est)} voci sono stime ricostruite dai file su Supabase (prezzi standard Kie/fal).</i>")
     if any((r.get("servizio") == "openai" and not _usd(r)) for r in rs):
-        lines.append("<i>I costi OpenAI risultano 0: imposta OPENAI_PRICE_IN_PER_M e OPENAI_PRICE_OUT_PER_M su Railway per contarli.</i>")
+        lines.append("<i>Alcune voci OpenAI precedenti al 15/10 sono a $0 (listino non ancora impostato): da lì in poi sono calcolate.</i>")
     lines.append("Dettaglio di un episodio: <code>/costi EP028</code>")
     return "\n".join(lines)

@@ -60,7 +60,7 @@ def write(idea: str, feedback: str = ""):
     text = j.get("output_text") or "".join(c.get("text", "") for o in j.get("output", []) for c in o.get("content", []) if c.get("type") == "output_text")
     spec = json.loads(text)
     usage = j.get("usage", {})
-    cost = (usage.get("input_tokens", 0) * config.OPENAI_PRICE_IN + usage.get("output_tokens", 0) * config.OPENAI_PRICE_OUT) / 1e6
+    cost = config.openai_cost(usage)
     return spec, usage, round(cost, 4)
 
 
@@ -80,7 +80,7 @@ def revise(spec: dict, change: str):
     r.raise_for_status(); j = r.json()
     text = j.get("output_text") or "".join(c.get("text", "") for o in j.get("output", []) for c in o.get("content", []) if c.get("type") == "output_text")
     usage = j.get("usage", {})
-    cost = (usage.get("input_tokens", 0) * config.OPENAI_PRICE_IN + usage.get("output_tokens", 0) * config.OPENAI_PRICE_OUT) / 1e6
+    cost = config.openai_cost(usage)
     return json.loads(text), usage, round(cost, 4)
 
 
@@ -114,7 +114,7 @@ def _call(prompt, schema, name):
     r.raise_for_status(); j = r.json()
     text = j.get("output_text") or "".join(c.get("text", "") for o in j.get("output", []) for c in o.get("content", []) if c.get("type") == "output_text")
     usage = j.get("usage", {})
-    cost = (usage.get("input_tokens", 0) * config.OPENAI_PRICE_IN + usage.get("output_tokens", 0) * config.OPENAI_PRICE_OUT) / 1e6
+    cost = config.openai_cost(usage)
     return json.loads(text), usage, round(cost, 4)
 
 

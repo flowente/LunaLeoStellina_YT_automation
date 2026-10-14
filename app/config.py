@@ -30,8 +30,25 @@ KIE_CREDIT_USD = 0.005
 # OpenAI (giudice visivo)
 OPENAI_API_KEY = env("OPENAI_API_KEY", "")
 OPENAI_MODEL = env("OPENAI_VISION_MODEL", "gpt-6-astra")
-OPENAI_PRICE_IN = _num(env("OPENAI_PRICE_IN_PER_M", "0"))    # $ per 1M token in ingresso (per il registro costi)
-OPENAI_PRICE_OUT = _num(env("OPENAI_PRICE_OUT_PER_M", "0"))
+# Listino OpenAI, $ per 1M token, tier Standard (developers.openai.com/api/docs/pricing, letto il 15/10/2026).
+# Le variabili OPENAI_PRICE_*_PER_M su Railway, se impostate, hanno la precedenza.
+OPENAI_PRICES = {
+    "gpt-6-astra":  {"in": 10.00, "cached": 1.00, "out": 50.00},
+    "gpt-6.1-sol":  {"in": 2.00,  "cached": 0.10, "out": 10.00},
+    "gpt-6-luna":   {"in": 0.10,  "cached": 0.01, "out": 0.50},
+}
+_p = OPENAI_PRICES.get(OPENAI_MODEL, {})
+OPENAI_PRICE_IN = _num(env("OPENAI_PRICE_IN_PER_M", str(_p.get("in", 0))))
+OPENAI_PRICE_CACHED = _num(env("OPENAI_PRICE_CACHED_PER_M", str(_p.get("cached", _p.get("in", 0)))))
+OPENAI_PRICE_OUT = _num(env("OPENAI_PRICE_OUT_PER_M", str(_p.get("out", 0))))
+
+
+def openai_cost(usage: dict) -> float:
+    """Costo di una chiamata dai token restituiti da OpenAI (i token in cache costano meno)."""
+    inp = usage.get("input_tokens", 0) or 0
+    cached = (usage.get("input_tokens_details") or {}).get("cached_tokens", 0) or 0
+    out = usage.get("output_tokens", 0) or 0
+    return round(((inp - cached) * OPENAI_PRICE_IN + cached * OPENAI_PRICE_CACHED + out * OPENAI_PRICE_OUT) / 1e6, 4)
 
 # Supabase Storage (link pubblici per Buffer e per n8n)
 SUPABASE_URL = env("SUPABASE_URL", "https://nerfwrxouzqrabtjszbp.supabase.co")
