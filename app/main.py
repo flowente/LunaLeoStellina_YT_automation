@@ -406,7 +406,7 @@ def do_brainstorm(ep, text, log):
     b = brain_load() or {"history": [], "started": datetime.datetime.now().isoformat(timespec="seconds")}
     b["history"].append({"chi": "simone", "testo": text})
     out, usage, cost = writer.brainstorm(b["history"])
-    costs.record(tipo="brainstorming", servizio="openai", modello=config.OPENAI_MODEL, costo_usd=cost, esito="ok", note=json.dumps(usage))
+    costs.record(tipo="brainstorming", servizio="openai", modello=config.OPENAI_IDEAS_MODEL, costo_usd=cost, esito="ok", note=json.dumps(usage))
     b["history"].append({"chi": "autore", "testo": f"{out['risposta']}\n[pacchetto] {out['titolo']}: {out['descrizione']}"})
     b["pack"] = {"titolo": out["titolo"], "descrizione": out["descrizione"]}; brain_save(b)
     telegram.send(f"{telegram.esc(out['risposta'])}\n\n📦 <b>{telegram.esc(out['titolo'])}</b>\n{telegram.esc(out['descrizione'])}\n\n"
@@ -422,7 +422,7 @@ def ideas_file():
 
 def do_ideas(ep, tema, log):
     ideas, usage, cost = writer.concepts(tema)
-    costs.record(tipo="idee", servizio="openai", modello=config.OPENAI_MODEL, costo_usd=cost, esito="ok", note=json.dumps(usage))
+    costs.record(tipo="idee", servizio="openai", modello=config.OPENAI_IDEAS_MODEL, costo_usd=cost, esito="ok", note=json.dumps(usage))
     ideas_file().write_text(json.dumps({"tema": tema, "idee": ideas}, ensure_ascii=False, indent=1), encoding="utf-8")
     lines = [f"<b>Idee{(' · ' + telegram.esc(tema)) if tema else ''}</b>"]
     for i, it in enumerate(ideas, 1):

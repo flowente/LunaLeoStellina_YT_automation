@@ -43,12 +43,21 @@ OPENAI_PRICE_CACHED = _num(env("OPENAI_PRICE_CACHED_PER_M", str(_p.get("cached",
 OPENAI_PRICE_OUT = _num(env("OPENAI_PRICE_OUT_PER_M", str(_p.get("out", 0))))
 
 
-def openai_cost(usage: dict) -> float:
+# Modello per /idee e /brainstorming: testi brevi, nessun rischio di spesa -> modello economico (5 volte meno di astra).
+# Giudice e scrittura dell'episodio finale (/nuovo, /modifica) restano su OPENAI_MODEL: un prompt sbagliato costa una bozza.
+OPENAI_IDEAS_MODEL = env("OPENAI_IDEAS_MODEL", "gpt-6.1-sol")
+
+
+def openai_cost(usage: dict, model: str = None) -> float:
     """Costo di una chiamata dai token restituiti da OpenAI (i token in cache costano meno)."""
+    if model and model != OPENAI_MODEL and model in OPENAI_PRICES:
+        p = OPENAI_PRICES[model]; pin, pc, pout = p["in"], p["cached"], p["out"]
+    else:
+        pin, pc, pout = OPENAI_PRICE_IN, OPENAI_PRICE_CACHED, OPENAI_PRICE_OUT
     inp = usage.get("input_tokens", 0) or 0
     cached = (usage.get("input_tokens_details") or {}).get("cached_tokens", 0) or 0
     out = usage.get("output_tokens", 0) or 0
-    return round(((inp - cached) * OPENAI_PRICE_IN + cached * OPENAI_PRICE_CACHED + out * OPENAI_PRICE_OUT) / 1e6, 4)
+    return round(((inp - cached) * pin + cached * pc + out * pout) / 1e6, 4)
 
 # Supabase Storage (link pubblici per Buffer e per n8n)
 SUPABASE_URL = env("SUPABASE_URL", "https://nerfwrxouzqrabtjszbp.supabase.co")

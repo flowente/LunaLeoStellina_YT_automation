@@ -105,16 +105,17 @@ def _catalog():
     return "\n".join(f"- {k}: {v.get('title', '')}: {str(v.get('goal', ''))[:140]}" for k, v in sorted(eps.items()))
 
 
-def _call(prompt, schema, name):
+def _call(prompt, schema, name, model=None):
     if not config.OPENAI_API_KEY: raise RuntimeError("OPENAI_API_KEY non impostata")
-    body = {"model": config.OPENAI_MODEL, "input": [{"role": "user", "content": prompt}],
+    model = model or config.OPENAI_IDEAS_MODEL
+    body = {"model": model, "input": [{"role": "user", "content": prompt}],
             "text": {"format": {"type": "json_schema", "name": name, "schema": schema, "strict": True}}}
     r = requests.post("https://api.openai.com/v1/responses", headers={"Authorization": f"Bearer {config.OPENAI_API_KEY}"},
                       json=body, timeout=180)
     r.raise_for_status(); j = r.json()
     text = j.get("output_text") or "".join(c.get("text", "") for o in j.get("output", []) for c in o.get("content", []) if c.get("type") == "output_text")
     usage = j.get("usage", {})
-    cost = config.openai_cost(usage)
+    cost = config.openai_cost(usage, model)
     return json.loads(text), usage, round(cost, 4)
 
 
