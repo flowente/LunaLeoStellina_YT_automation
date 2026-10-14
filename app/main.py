@@ -465,7 +465,12 @@ async def telegram_webhook(request: Request, x_telegram_bot_api_secret_token: st
     if text.startswith("/id") or text.startswith("/start"):
         telegram.send(f"Il tuo chat id è <code>{chat}</code>", chat=chat); return {"ok": True}
     if chat != str(telegram.CHAT): return {"ok": True}
-    parts = text.split(); cmd = parts[0].lower(); arg = parts[1].upper() if len(parts) > 1 else ""
+    parts = text.split(); cmd = parts[0].lower().split("@")[0]; arg = parts[1].upper() if len(parts) > 1 else ""
+    needs_ep = {"/bozza": "/bozza EP027", "/upscale": "/upscale EP028  (oppure /upscale EP028 2 per la take 2)",
+                "/stato": "/stato EP027", "/annulla": "/annulla EP027", "/modifica": "/modifica EP027 correzione",
+                "/programma": "/programma EP027 20/10 17:30  oppure  /programma EP027 coda"}
+    if cmd in needs_ep and not arg:
+        telegram.send(f"Manca l'episodio. Scrivi così: <code>{telegram.esc(needs_ep[cmd])}</code>"); return {"ok": True}
     try:
         if cmd == "/bozza" and arg:
             episodes.request_for(arg); run_job("draft", arg, do_draft, arg)
