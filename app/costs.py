@@ -22,9 +22,22 @@ def record(**row):
         w.writerow(row)
 
 
-def rows():
+def history_file():
+    """Spese passate che il registro del servizio non ha (episodi fatti col PC, registro perso): nel repository, sola lettura."""
+    return config.APP / "channels" / config.CHANNEL / "costi_storici.csv"
+
+
+def rows(include_history=True):
     p = path()
-    return list(csv.DictReader(open(p, encoding="utf-8"))) if p.exists() else []
+    live = list(csv.DictReader(open(p, encoding="utf-8"))) if p.exists() else []
+    h = history_file()
+    if not (include_history and h.exists()): return live
+    hist = list(csv.DictReader(open(h, encoding="utf-8")))
+    for r in hist: r["_storico"] = "1"
+    last = max((r["data"] for r in hist), default="")
+    def norm(d):          # le date del servizio sono senza fuso (ora del server, UTC)
+        return d if ("+" in d[10:] or d.endswith("Z")) else d + "+00:00"
+    return hist + [r for r in live if norm(r.get("data", "")) > last]     # niente doppioni col periodo già nello storico
 
 
 # ------------------------------------------------------------------ report (/costi)
@@ -99,6 +112,8 @@ def report(ep: str | None = None) -> str:
     first = min((w for r in rs if (w := _when(r))), default=None)
     lines.append("Sempre: " + " · ".join(f"{label} ${m(by[g])}" for g, label in GROUPS if by[g]))
     lines.append(f"Totale registrato: <b>${m(sum(by.values()))}</b>" + (f" (dal {first:%d/%m/%Y})" if first else ""))
+    est = [r for r in rs if r.get("esito") == "stima"]
+    if est: lines.append(f"<i>{len(est)} voci sono stime ricostruite dai file su Supabase (prezzi standard Kie/fal).</i>")
     if any((r.get("servizio") == "openai" and not _usd(r)) for r in rs):
         lines.append("<i>I costi OpenAI risultano 0: imposta OPENAI_PRICE_IN_PER_M e OPENAI_PRICE_OUT_PER_M su Railway per contarli.</i>")
     lines.append("Dettaglio di un episodio: <code>/costi EP028</code>")

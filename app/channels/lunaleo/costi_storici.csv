@@ -1,0 +1,9 @@
+data,canale,episodio,take,tipo,servizio,modello,risoluzione,durata_s,crediti,costo_usd,esito,task_id,file,credito_residuo,note
+2026-10-13T23:05:00+00:00,lunaleo,EP026,1,bozza 480p,kie,bytedance/seedance-2-5,480p,12,,1.68,stima,,EP026_take01_final.mp4,,ricostruito da Supabase: registro del servizio perso (volume)
+2026-10-13T23:17:00+00:00,lunaleo,EP027,1,bozza 480p,kie,bytedance/seedance-2-5,480p,12,,1.68,stima,,EP027_take01_final.mp4,,ricostruito da Supabase: registro del servizio perso (volume)
+2026-10-13T23:30:00+00:00,lunaleo,EP027,1,finale 1080p da bozza,kie,bytedance/seedance-2-5-draft,1080p,12,,9.48,stima,,EP027_take01_1080p_final.mp4,,ricostruito da Supabase: registro del servizio perso (volume)
+2026-10-13T23:39:00+00:00,lunaleo,EP028,1,bozza 480p,kie,bytedance/seedance-2-5,480p,12,,1.68,stima,,EP028_take01_final.mp4,,ricostruito da Supabase: registro del servizio perso (volume)
+2026-10-13T23:44:00+00:00,lunaleo,EP028,1,finale 1080p da bozza,kie,bytedance/seedance-2-5-draft,1080p,12,,9.48,stima,,EP028_take01_1080p_final.mp4,,ricostruito da Supabase: registro del servizio perso (volume)
+2026-10-14T07:15:00+00:00,lunaleo,EP027,,upscale di prova (manuale su fal.ai),fal,fal-ai/seedvr/upscale/video,1440x2576,12,,1.07,ok,,,,prova a mano di Simone: 1440x2576x288 fotogrammi
+2026-10-14T10:15:00+00:00,lunaleo,EP028,1,upscale di prova (manuale su fal.ai),fal,fal-ai/seedvr/upscale/video,1088x1936,10.7,,0.54,ok,,,,prova a mano di Simone: 1088x1936x257 fotogrammi
+2026-10-14T12:09:00+00:00,lunaleo,EP028,1,upscale 1080p da bozza,fal,fal-ai/seedvr/upscale/video,1088x1936,10.7,,0.54,stima,,EP028_take01_1080p_up_final.mp4,,ricostruito da Supabase: primo /upscale dal servizio
