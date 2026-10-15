@@ -2,15 +2,27 @@
  "name": "Luna, Leo e Stellina",
  "youtube": "https://www.youtube.com/@LunaLeoStellina",
  "buffer_channel_id": "6acd62e3778b240e2fee77f3",
- "buffer_youtube": {"categoryId": "1", "madeForKids": true, "isAiGenerated": true, "privacy": "public", "notifySubscribers": true},
- "description_tail_it": "Luna, Leo e Stellina: brevi cartoni animati 3D per bambini da 1 a 4 anni. ⭐",
- "description_tail_en": "Luna, Leo and Stella: short 3D cartoons for toddlers aged 1 to 4. ⭐",
+ "buffer_youtube": {
+  "categoryId": "1",
+  "madeForKids": true,
+  "isAiGenerated": true,
+  "privacy": "public",
+  "notifySubscribers": true
+ },
+ "description_tail_it": "Luna, Leo e Stellina: brevi cartoni animati 3D per bambini da 1 a 4 anni. ⭐\nTi aspettiamo su Marte per una nuova avventura! 🚀⭐",
+ "description_tail_en": "Luna, Leo and Stella: short 3D cartoons for toddlers aged 1 to 4. ⭐\nWe're waiting for you on Mars for a new adventure! 🚀⭐",
  "post": {
   "color_grade": "huesaturation=saturation=0.3:colors=b+c+g:strength=1,eq=saturation=1.22:contrast=1.06:brightness=0.01",
-  "loudness_lufs": -14, "true_peak_db": -1.5,
+  "loudness_lufs": -14,
+  "true_peak_db": -1.5,
   "loop_auto": true
  },
- "economy": {"draft_resolution": "480p", "final_resolution": "1080p", "default_duration_s": 12, "max_auto_retakes": 0},
+ "economy": {
+  "draft_resolution": "480p",
+  "final_resolution": "1080p",
+  "default_duration_s": 12,
+  "max_auto_retakes": 0
+ },
  "rules": [
   "Personaggi sempre su Marte, all'esterno.",
   "Emoji stella sempre e solo ⭐.",

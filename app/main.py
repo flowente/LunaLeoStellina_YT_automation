@@ -575,9 +575,8 @@ async def telegram_webhook(request: Request, x_telegram_bot_api_secret_token: st
             if not t.get("upscale"): telegram.send(f"<b>{ep}</b> · nessun upscale per la take {take}")
             else:
                 use_upscale_as_final(t); save_state(ep, s)
-                telegram.send(f"<b>{ep}</b> · finale = upscale fal (take {take}).\n"
-                              f'<a href="{t["final_url"]}">Finale</a> · <a href="{t["cover_url"]}">Copertina</a>',
-                              telegram.final_buttons(ep, take))
+                notify("final_ready", {"episode": ep, "take": take, "final_url": t["final_url"], "cover_url": t["cover_url"],
+                                       "file_name": t["final_1080"], "provider": "fal", **episodes.texts(ep)})   # Telegram + copia su Drive (n8n)
         elif action == "abort": abort(ep)
         elif action == "nuovo_ok":
             pr = json.loads(prop_file(ep).read_text(encoding="utf-8")); sp = dict(pr["spec"]); sp.pop("riassunto_it", None)
