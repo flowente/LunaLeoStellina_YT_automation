@@ -38,6 +38,8 @@ REFS = {"luna": "characters/luna_sheet_CANON.png", "leo": "characters/leo_sheet_
         "leo_no_helmet": "characters/leo_no_helmet_sheet.png", "space_friends": "props/space_friends_sheet.png",
         "leo_gear": "props/leo_gear_sheet.png", "color_stones_baskets": "props/color_stones_baskets_sheet.png",
         "stellina": "characters/stella_sheet_CANON.png",
+        "color_balls": "props/color_balls_sheet.png", "surprise_spheres": "props/surprise_spheres_sheet.png",
+        "stack_stones": "props/stack_stones_sheet.png", "color_craters": "props/color_craters_sheet.png",
         "mars_A": "worlds/mars_A_CANON.png", "mars_B": "worlds/mars_B_CANON.png", "mars_C": "worlds/mars_C_CANON.png"}
 
 # Regole di crescita (13/10/2026, da YouTube Analytics/assistente): aggancio immediato + loop perfetto
@@ -319,21 +321,23 @@ EPISODES = {
  ),
  "EP030": dict(
   title="Il razzo delle palline", slug="il_razzo_delle_palline", duration=12, cast=["luna", "leo", "stellina"], world="mars_A",
-  goal="Colori rosso, blu, giallo (spunto: 'Color Balls Machine'). Dal portellone del razzo escono palline giganti una alla volta; i bambini le prendono e le abbracciano. Loop: le palline rientrano nel razzo.",
+  goal="Colori rosso, blu, giallo (spunto: 'Color Balls Machine'). Dalla porta del razzo escono palline giganti una alla volta e rotolano giù dalla scaletta; i bambini le prendono e le abbracciano. Loop: le palline rientrano nel razzo.",
+  props=["color_balls"],
+  props_text="- THE THREE BALLS (only red, blue and yellow are used) are exactly those of {color_balls}: perfectly round, smooth, glossy balls in SOLID opaque flat colors, one soft white highlight, no patterns, no faces.",
   framing=("FRAMING: medium shot, the SAME framing from the very first frame to the last (no zoom, no push-in). Luna stands on the LEFT and Leo on the RIGHT, their full bodies fill about 40% of the frame height, feet at about 18% from the bottom edge. "
-           "Behind them on the LEFT stands the white rocket with a small round hatch near its base, at the children's height. "
+           "Behind them on the LEFT stands the white rocket of the set, exactly as in the background, with its open doorway and little ladder at the base. "
            "STELLINA floats between the children, just above their helmets."),
   action=[
-   "0-1s: Luna and Leo already bounce on the spot, looking at the rocket hatch with excited faces; STELLINA glows and the round hatch starts to open.",
-   "1-4s: a BIG glossy solid RED ball, as big as a beach ball, rolls out of the hatch and bounces softly across the sand to Luna; she catches it and hugs it with a giggle.",
-   "4-7s: a BIG glossy solid BLUE ball rolls out of the hatch and bounces softly to Leo; he catches it and hugs it, laughing.",
-   "7-10s: a BIG glossy solid YELLOW ball rolls out and stops between them; Luna and Leo put down their balls and lift the yellow ball together, cheering.",
-   "10-12s: STELLINA does one gentle spin: the three balls roll back together into the hatch, which closes; Luna and Leo bounce on the spot looking at the hatch, exactly as at the very beginning.",
+   "0-1s: Luna and Leo already bounce on the spot, looking at the rocket doorway with excited faces; STELLINA glows above them.",
+   "1-4s: a BIG glossy solid RED ball, as big as a beach ball, rolls out of the rocket doorway, bounces softly down the little ladder and across the sand to Luna; she catches it and hugs it with a giggle.",
+   "4-7s: a BIG glossy solid BLUE ball rolls out of the doorway, bounces down the ladder and across the sand to Leo; he catches it and hugs it, laughing.",
+   "7-10s: a BIG glossy solid YELLOW ball rolls out, bounces down the ladder and stops between them; Luna and Leo put down their balls and lift the yellow ball together, cheering.",
+   "10-12s: STELLINA does one gentle spin: the three balls roll back together up the ladder and into the rocket doorway; Luna and Leo bounce on the spot looking at the doorway, exactly as at the very beginning.",
   ],
   rules=("RULES: always exactly three characters: Luna, Leo and STELLINA, only ONE STELLINA; STELLINA never changes color and never has arms. Exactly three balls, all the same size, perfectly round and smooth: red, blue, yellow, in this order, never more, "
          "and they never change color. Only ONE ball comes out at a time. Luna gets ONLY the red ball, Leo ONLY the blue ball, the yellow one is "
-         "lifted together. The rocket never moves; only its small round hatch opens and closes. "),
-  audio="AUDIO: an original bouncy synth-pop and xylophone melody, 108 bpm; a playful 'pop' when the hatch opens, a soft 'boing' and a bright note for each ball (different for red, blue and yellow), children's giggles and a cheer, a sparkly shimmer when STELLINA spins; the music ends on the same note and phrase it starts with, so the video loops seamlessly.",
+         "lifted together. The rocket is exactly the one of the set and never moves or changes: the balls come out of its existing doorway. "),
+  audio="AUDIO: an original bouncy synth-pop and xylophone melody, 108 bpm; a playful 'pop' when each ball appears in the doorway, a soft 'boing' and a bright note for each ball (different for red, blue and yellow), children's giggles and a cheer, a sparkly shimmer when STELLINA spins; the music ends on the same note and phrase it starts with, so the video loops seamlessly.",
   title_it="Il razzo delle palline! 🔴🔵🟡 Che colore esce? Con Luna e Leo ⭐ | Colori per bambini #shorts",
   title_en="The Ball Rocket! 🔴🔵🟡 Which Color Comes Out? With Luna and Leo ⭐ | Colors for Toddlers #shorts",
   desc_it="Dal razzo escono palline giganti: rossa per Luna, blu per Leo e gialla per tutti e due! Che colore uscirà? 🔴🔵🟡 ⭐",
@@ -342,6 +346,8 @@ EPISODES = {
  ),
  "EP031": dict(
   title="Le sfere sorpresa di Stellina", slug="le_sfere_sorpresa", duration=12, cast=["luna", "leo", "stellina"], world="mars_B",
+  props=["surprise_spheres", "color_balls"],
+  props_text="- THE WHITE SPHERES look exactly like {surprise_spheres}: big smooth matte white spheres with a thin seam in the middle that open like an egg, the top half lifting and tilting, a soft warm glow inside.\n- THE BALLS INSIDE (only green, purple and orange are used) are exactly those of {color_balls}: perfectly round, smooth, glossy balls in SOLID opaque flat colors, one soft white highlight, no patterns, no faces.",
   goal="Colori verde, viola, arancione (spunto: 'Surprise Balls'). Tre grandi sfere bianche: Stellina ci passa sopra, la sfera si apre a metà e dentro c'è una pallina colorata. Loop: le sfere si richiudono.",
   framing=("FRAMING: medium shot, the SAME framing from the very first frame to the last (no zoom, no push-in). Luna stands on the LEFT and Leo on the RIGHT, their full bodies fill about 40% of the frame height, feet at about 18% from the bottom edge. "
            "On the sand in front of them, in a row, stand three BIG smooth WHITE spheres, each as tall as the children's knees: "
@@ -365,6 +371,8 @@ EPISODES = {
  ),
  "EP032": dict(
   title="La torre di sassi colorati", slug="la_torre_di_sassi", duration=12, cast=["luna", "leo", "stellina"], world="mars_B",
+  props=["stack_stones"],
+  props_text="- THE STONES are exactly those of {stack_stones}: flat, round, smooth stones with soft rounded edges in SOLID opaque colors: a BIG RED one, a MEDIUM BLUE one, a SMALL YELLOW one; stacked they form a stable centered tower, red at the bottom, yellow on top.",
   goal="Colori rosso, blu, giallo + ordine e impilare (spunto: 'Color Stack Rings'). Luna e Leo impilano tre grandi sassi piatti, Stellina fa brillare la torre. Loop: la torre si smonta saltellando.",
   framing=("FRAMING: medium shot, the SAME framing from the very first frame to the last (no zoom, no push-in). Luna stands on the LEFT and Leo on the RIGHT, their full bodies fill about 40% of the frame height, feet at about 18% from the bottom edge. "
            "Between them, in the lower middle of the frame, there is a flat spot on the sand; next to Luna lies a BIG flat round RED stone, "
@@ -388,6 +396,8 @@ EPISODES = {
  ),
  "EP033": dict(
   title="Biglie giù dalla duna", slug="biglie_giu_dalla_duna", duration=12, cast=["luna", "leo", "stellina"], world="mars_B",
+  props=["color_craters", "color_balls"],
+  props_text="- THE CRATERS are exactly those of {color_craters}: three small shallow round craters in the sand, each with a smooth raised rim in SOLID color (red, yellow, blue), plain orange sand inside.\n- THE MARBLES (only red, blue and yellow are used) are exactly those of {color_balls}: perfectly round, smooth, glossy balls in SOLID opaque flat colors, one soft white highlight, no patterns, no faces.",
   goal="Colori + smistare (spunto: 'Marble Maze Run'). Tre biglie giganti rotolano giù dalla duna e ognuna si ferma nel cratere del suo colore. Loop: le biglie risalgono.",
   framing=("FRAMING: medium shot, the SAME framing from the very first frame to the last (no zoom, no push-in). Luna stands on the LEFT and Leo on the RIGHT, their full bodies fill about 40% of the frame height, feet at about 18% from the bottom edge. "
            "Behind them a smooth sand dune slopes down from the upper RIGHT to the lower LEFT. In front of the children, on the sand, "
