@@ -49,7 +49,7 @@ def send_video(url, caption, buttons=None):
 
 
 COMMANDS = [("episodi", "Elenco episodi"), ("nuovo", "Propone un episodio nuovo: /nuovo idea"), ("idee", "Idee pronte: /idee oppure /idee colori"),
-            ("brainstorming", "Ragioniamo su un'idea: /brainstorming idea"), ("fine", "Chiude il brainstorming"),
+            ("brainstorming", "Ragioniamo su un'idea: /brainstorming idea"), ("fine", "Chiude il brainstorming"), ("lungo", "Video lunghi: /lungo LV001"),
             ("bozza", "Genera la bozza: /bozza EP027"), ("upscale", "Prova l'upscale fal: /upscale EP027"),
             ("modifica", "Corregge un episodio: /modifica EP027 correzione"), ("stato", "Stato: /stato EP027"),
             ("programma", "Buffer: /programma EP027 20/10 17:30 oppure coda"), ("annulla", "Esce dalla produzione: /annulla EP027"),

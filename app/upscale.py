@@ -59,8 +59,9 @@ def cost_usd(video: Path) -> tuple:
 
 
 def conform(upscaled: Path, draft_raw: Path, out: Path) -> Path:
-    """Esattamente 1080x1920 + correzione colore/tremolio + audio originale della bozza."""
-    vf = "scale=1080:1920:flags=lanczos" + ("," + config.UPSCALE_FIX_VF if config.UPSCALE_FIX_VF else "") + ",setsar=1"
+    """Esattamente 1080x1920 (o 1920x1080 per i clip 16:9) + correzione colore/tremolio + audio originale della bozza."""
+    d = probe(draft_raw); size = "1920:1080" if d["w"] > d["h"] else "1080:1920"          # 16:9 per i video lunghi
+    vf = f"scale={size}:flags=lanczos" + ("," + config.UPSCALE_FIX_VF if config.UPSCALE_FIX_VF else "") + ",setsar=1"
     subprocess.run([postprod.ffmpeg(), "-v", "error", "-y", "-i", str(upscaled), "-i", str(draft_raw),
                     "-map", "0:v:0", "-map", "1:a:0?", "-vf", vf,
                     "-c:v", "libx264", "-crf", "16", "-preset", "medium", "-pix_fmt", "yuv420p",

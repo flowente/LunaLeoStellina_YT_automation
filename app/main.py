@@ -12,7 +12,7 @@ from pathlib import Path
 import requests
 from fastapi import FastAPI, Header, HTTPException, Body, Request
 from fastapi.responses import FileResponse, PlainTextResponse
-from . import config, episodes, kie, postprod, qc, judge, storage, buffer, costs, telegram, writer, upscale
+from . import config, episodes, kie, postprod, qc, judge, storage, buffer, costs, telegram, writer, upscale, longform
 
 app = FastAPI(title="Luna Leo & Stellina — automazione short")
 JOBS: dict = {}
@@ -45,6 +45,13 @@ def notify(event, payload):
                 txt = telegram.draft_report(payload)
                 if payload.get("preview_url"): telegram.send_video(payload["preview_url"], txt, telegram.draft_buttons(ep, take))
                 else: telegram.send(txt, telegram.draft_buttons(ep, take))
+            elif event == "final_ready" and lv_of(ep):
+                lv = lv_of(ep); L = longform.get(lv); cl = longform.clips(L)
+                ready = sum(1 for c in cl if longform.clip_status(c, state)["final_take"])
+                telegram.send(f"<b>{ep}</b> · clip pronta per <b>{lv}</b> ({ready}/{len(cl)}).\n"
+                              f'<a href="{payload["final_url"]}">Clip</a>' + ("\nTutte pronte: puoi montare." if ready == len(cl) else ""),
+                              [[{"text": "Tabellone", "callback_data": f"lv_board|{lv}|0"}] +
+                               ([{"text": "Monta il video", "callback_data": f"lv_mount|{lv}|0"}] if ready == len(cl) else [])])
             elif event == "final_ready":
                 via = " · upscale fal" if payload.get("provider") == "fal" else ""
                 telegram.send(f"<b>{ep}</b> · finale 1080p pronto{via} (copia su Drive in corso).\n"
@@ -64,6 +71,38 @@ def notify(event, payload):
         requests.post(config.N8N_WEBHOOK_URL, json={"event": event, "channel": config.CHANNEL, **payload}, timeout=30)
     except Exception as e:
         print("webhook n8n non raggiunto:", e)
+
+
+def lv_of(ep):
+    """Il video lungo a cui appartiene una clip (None per gli short)."""
+    try:
+        for lv, L in longform.all_longs().items():
+            if ep in longform.clips(L) and not ep.startswith("EP"): return lv
+    except Exception as e:
+        print("longs:", e)
+    return None
+
+
+def do_long_drafts(lv, budget, log):
+    return longform.batch_drafts(lv, budget, lambda c, log: do_draft(c, log), state, telegram.send, log)
+
+
+def do_montage(lv, log):
+    progress(lv, "montaggio avviato (qualche minuto)")
+    r = longform.montage(lv, state, ep_dir, log)
+    prev = storage.upload(r["preview"], f"{config.SUPABASE_VIDEO_PREFIX}/{config.CHANNEL}/{lv}/{r['preview'].name}")
+    cover = storage.upload(r["cover"], f"{config.SUPABASE_VIDEO_PREFIX}/{config.CHANNEL}/{lv}/{r['cover'].name}")
+    dom = os.environ.get("RAILWAY_PUBLIC_DOMAIN") or os.environ.get("PUBLIC_DOMAIN") or "localhost"
+    link = f"https://{dom}" + longform.signed_path(lv, r["file"].name)
+    tx = longform.texts(lv, r["chapters"])
+    (longform.long_dir(lv) / "montaggio.json").write_text(json.dumps({**{k: str(v) for k, v in r.items()}, "texts": tx,
+        "preview_url": prev, "cover_url": cover, "download": link}, ensure_ascii=False, indent=1), encoding="utf-8")
+    cap = (f"<b>{lv}</b> · montaggio pronto: {r['duration'] // 60:.0f}:{r['duration'] % 60:02.0f} min, {r['size_mb']} MB\n"
+           f'<a href="{link}">Scarica il 1080p</a> (link valido 72 ore) · <a href="{cover}">Miniatura</a>\n\n'
+           f"<b>Titolo:</b> {telegram.esc(tx['title_it'])}\n"
+           + ("<b>Capitoli:</b>\n" + telegram.esc("\n".join(r["chapters"])) if r["chapters"] else "Capitoli: non generati (servono almeno 3 da 10 s)"))
+    telegram.send_video(prev, cap)
+    return {"lv": lv, "download": link, "preview": prev}
 
 
 def progress(ep, text):
@@ -361,6 +400,15 @@ def get_file(ep: str, name: str, x_token: str = Header(None)):
     return FileResponse(p)
 
 
+@app.get("/pub/{lv}/{name}")
+def pub_file(lv: str, name: str, exp: str = "", sig: str = ""):
+    """Link privato a tempo per scaricare il montaggio (troppo grande per Supabase gratuito)."""
+    if not longform.check_sig(lv, name, exp, sig): raise HTTPException(403, "link scaduto o non valido")
+    p = longform.long_dir(lv) / Path(name).name
+    if not p.exists(): raise HTTPException(404)
+    return FileResponse(p, media_type="video/mp4", filename=p.name)
+
+
 @app.get("/jobs/{jid}")
 def job(jid: str, x_token: str = Header(None)):
     auth(x_token)
@@ -499,7 +547,7 @@ def _tg_startup():
                  "Railway → servizio → tasto destro / ⋮ → Attach Volume → mount path /data")
     lines.append("Riprendo: " + ", ".join(resumed) if resumed else "Nessun lavoro in corso.")
     if lost: lines.append("Interrotte dal riavvio, da rilanciare: " + ", ".join(lost) + " (usa /bozza).")
-    lines.append("Comandi: /episodi · /nuovo idea · /idee · /brainstorming · /modifica EP0xx correzione · /bozza EP0xx · /upscale EP0xx · /annulla EP0xx · /stato EP0xx · /programma EP0xx 20/10 17:30 · /costi")
+    lines.append("Comandi: /episodi · /nuovo idea · /idee · /brainstorming · /lungo · /modifica EP0xx correzione · /bozza EP0xx · /upscale EP0xx · /annulla EP0xx · /stato EP0xx · /programma EP0xx 20/10 17:30 · /costi")
     try:
         if telegram.enabled(): threading.Thread(target=telegram.send, args=("\n".join(lines),), daemon=True).start()
     except Exception as e:
@@ -562,6 +610,13 @@ async def telegram_webhook(request: Request, x_telegram_bot_api_secret_token: st
                     brain_close(); telegram.send(f"Ragioniamo su «{telegram.esc(it['titolo'])}»…")
                     run_job("brainstorming", "IDEA", do_brainstorm, "IDEA",
                             f"Partiamo da questa idea: {it['titolo']}. {it['descrizione']} Dimmi come la renderesti più forte.")
+        elif action == "lv_board":
+            telegram.send(longform.board(ep, state), [[{"text": "Bozze mancanti ($30)", "callback_data": f"lv_drafts|{ep}|30"},
+                                                     {"text": "Monta", "callback_data": f"lv_mount|{ep}|0"}]])
+        elif action == "lv_drafts":
+            run_job("bozze lungo", ep, do_long_drafts, ep, float(take or 30))
+        elif action == "lv_mount":
+            run_job("montaggio", ep, do_montage, ep)
         elif action == "cmd_upscale":
             try: start_upscale(ep)
             except Exception as e: telegram.send(f"⚠️ {telegram.esc(e)}")
@@ -632,6 +687,26 @@ async def telegram_webhook(request: Request, x_telegram_bot_api_secret_token: st
             episodes.request_for(arg)
             telegram.send(f"<b>{arg}</b> · preparo la modifica…")
             run_job("proposta", arg, do_revise, arg, change)
+        elif cmd == "/lungo":
+            # /lungo · /lungo LV001 · /lungo bozze LV001 [tetto $] · /lungo monta LV001
+            sub = parts[1].lower() if len(parts) > 1 else ""
+            if not sub:
+                L = longform.all_longs()
+                telegram.send("Video lunghi:\n" + "\n".join(
+                    f"{k} · {v['title']} · {sum(1 for c in longform.clips(v) if longform.clip_status(c, state)['final_take'])}/{len(longform.clips(v))} clip"
+                    for k, v in L.items()) if L else "Nessun video lungo definito.",
+                    [[{"text": k, "callback_data": f"lv_board|{k}|0"} for k in list(L)[:4]]] if L else None)
+            elif sub == "bozze" and len(parts) > 2:
+                lv = parts[2].upper(); longform.get(lv)
+                budget = float(parts[3].replace(",", ".")) if len(parts) > 3 else 30.0
+                telegram.send(f"<b>{lv}</b> · bozze in serie con tetto ${budget:.0f}, una alla volta. Ogni bozza arriva con Approva/Rifai.")
+                run_job("bozze lungo", lv, do_long_drafts, lv, budget)
+            elif sub == "monta" and len(parts) > 2:
+                lv = parts[2].upper(); longform.get(lv); run_job("montaggio", lv, do_montage, lv)
+            else:
+                lv = parts[1].upper(); longform.get(lv)
+                telegram.send(longform.board(lv, state), [[{"text": "Bozze mancanti ($30)", "callback_data": f"lv_drafts|{lv}|30"},
+                                                           {"text": "Monta", "callback_data": f"lv_mount|{lv}|0"}]])
         elif cmd == "/brainstorming":
             idea = text.split(maxsplit=1)[1] if len(parts) > 1 else ""
             brain_close(); brain_save({"history": [], "started": datetime.datetime.now().isoformat(timespec="seconds")})
@@ -674,7 +749,7 @@ async def telegram_webhook(request: Request, x_telegram_bot_api_secret_token: st
         elif cmd == "/costi":
             telegram.send(costs.report(arg or None))
         else:
-            telegram.send("Comandi:\n/episodi — elenco episodi\n/nuovo idea — propone un episodio nuovo\n/idee tema — 5 idee pronte, ispirate agli episodi esistenti\n/brainstorming idea — ragioniamo insieme su un'idea abbozzata (chiudi con /fine)\n/bozza EP027 — genera la bozza\n/upscale EP027 — prova l'upscale fal della bozza (take: /upscale EP027 2)\n/annulla EP027 — esce dalla produzione dell'episodio\n/modifica EP027 correzione — corregge l'episodio e rifà la bozza\n/stato EP027 — stato\n/programma EP026 20/10 17:30 — programma su Buffer (ora italiana)\n/programma EP026 coda — mette in coda Buffer\n/costi — spese della settimana per episodio (/costi EP028 per il dettaglio)\n/id — chat id")
+            telegram.send("Comandi:\n/episodi — elenco episodi\n/nuovo idea — propone un episodio nuovo\n/idee tema — 5 idee pronte, ispirate agli episodi esistenti\n/brainstorming idea — ragioniamo insieme su un'idea abbozzata (chiudi con /fine)\n/bozza EP027 — genera la bozza\n/upscale EP027 — prova l'upscale fal della bozza (take: /upscale EP027 2)\n/annulla EP027 — esce dalla produzione dell'episodio\n/modifica EP027 correzione — corregge l'episodio e rifà la bozza\n/stato EP027 — stato\n/programma EP026 20/10 17:30 — programma su Buffer (ora italiana)\n/programma EP026 coda — mette in coda Buffer\n/lungo — video lunghi (/lungo LV001, /lungo bozze LV001 30, /lungo monta LV001)\n/costi — spese della settimana per episodio (/costi EP028 per il dettaglio)\n/id — chat id")
     except Exception as e:
         telegram.send(f"⚠️ {telegram.esc(e)}")
     return {"ok": True}

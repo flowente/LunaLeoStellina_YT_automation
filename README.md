@@ -53,6 +53,19 @@ Passaggi:
 
 Il comando `/upscale EP028` (oppure `/upscale EP028 2` per una take precisa) usa **sempre** fal, anche con l'interruttore su `seedance`: è la prova. Il risultato arriva su Telegram con il pulsante **Usa come finale**, che lo mette al posto del finale Seedance (quello vecchio resta annotato nello stato).
 
+## Video lunghi (branch `lungo`)
+
+Un video lungo (`LV001`…) è definito in `app/channels/lunaleo/longs.json`: capitoli → clip. Ogni clip è un episodio normale di `eps.py`
+con `aspect="16:9"` (mondi `worlds/mars_*_16x9.png`, regola CENTER-SAFE: azione nel terzo centrale, così si ritaglia anche in short).
+Le clip passano dalla pipeline degli short (bozza → Approva → upscale 1920×1080). Gli short esistenti possono entrare come clip.
+
+- `/lungo` — elenco; `/lungo LV001` — tabellone (✅ ⏳ 🟡 ⚪ ✏️) e spesa stimata per finire.
+- `/lungo bozze LV001 30` — bozze in serie, una alla volta, con tetto di spesa in $.
+- `/lungo monta LV001` — dissolvenze tra le clip, musica unica (`music` in longs.json, file su Supabase) con gli effetti delle clip sotto,
+  −14 LUFS, capitoli YouTube automatici nella descrizione, miniatura 1280×720, anteprima 480p su Telegram e link privato a tempo
+  (`/pub/...`, 72 ore) per il 1080p, che non entra nel limite di 50 MB di Supabase gratuito.
+- `LV000` è una prova a costo zero: compilation di EP027, EP028, EP030.
+
 ## Telegram
 
 Il bot manda ogni bozza con il giudizio e due pulsanti: **✅ Approva (1080p)** e **🔁 Rifai bozza**. Quando il finale è pronto manda il link e il pulsante **📅 Metti in coda su Buffer**.

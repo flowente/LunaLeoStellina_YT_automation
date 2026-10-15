@@ -1,0 +1,43 @@
+{
+ "LV000": {
+  "title": "Prova montaggio (compilation short)",
+  "aspect": "16:9",
+  "title_it": "Colori su Marte con Luna, Leo e Stellina ⭐ | Compilation per bambini",
+  "title_en": "Colors on Mars with Luna, Leo and Stella ⭐ | Toddler Compilation",
+  "desc_it": "Pozzanghere, nuvolette e palline giganti: impariamo i colori su Marte con Luna, Leo e Stellina! 🔴🔵🟡 ⭐",
+  "music": null,
+  "note": "Solo per collaudare montaggio, capitoli e link: usa gli short già fatti (verticali, al centro su sfondo sfocato). Costo $0.",
+  "chapters": [
+   {"title": "Pozzanghere colorate", "clips": ["EP027"]},
+   {"title": "Nuvolette di zucchero filato", "clips": ["EP028"]},
+   {"title": "Il razzo delle palline", "clips": ["EP030"]}
+  ]
+ },
+ "LV001": {
+  "title": "Il grande razzo dei colori",
+  "aspect": "16:9",
+  "title_it": "Il grande razzo dei colori 🚀 Impara 6 colori con Luna, Leo e Stellina ⭐ | Video per bambini",
+  "title_en": "The Big Color Rocket 🚀 Learn 6 Colors with Luna, Leo and Stella ⭐ | Toddler Video",
+  "desc_it": "Il razzo atterra su Marte e porta tanti colori! Con Luna, Leo e Stellina impariamo il rosso, il blu, il giallo, il verde, il viola e l'arancione con palline giganti, sfere sorpresa, torri di sassi e biglie. 🔴🔵🟡🟢🟣🟠 ⭐",
+  "music": "music/LV001_musica.mp3",
+  "cover": {"t": 30},
+  "chapters": [
+   {"title": "Il razzo atterra", "clips": ["LV001_C01", "LV001_C02"],
+    "summary": ["Il razzo scende piano tra le dune e atterra con uno sbuffo di sabbia; Stellina brilla in cielo.", "La porta si apre: Luna e Leo scendono dalla scaletta e salutano Stellina."]},
+   {"title": "Rosso", "clips": ["LV001_C03", "LV001_C04", "LV001_C05"],
+    "summary": ["Dalla porta del razzo rotola una palla ROSSA gigante: Luna la prende.", "Stellina apre una sfera bianca: dentro c'è una pallina ROSSA.", "Una biglia ROSSA rotola giù dalla duna e cade nel cratere rosso."]},
+   {"title": "Blu", "clips": ["LV001_C06", "LV001_C07", "LV001_C08"],
+    "summary": ["Una palla BLU gigante esce dal razzo: Leo la abbraccia.", "Sfera sorpresa: dentro c'è una pallina BLU.", "Biglia BLU nel cratere blu."]},
+   {"title": "Giallo", "clips": ["LV001_C09", "LV001_C10", "LV001_C11"],
+    "summary": ["Palla GIALLA dal razzo: la sollevano insieme.", "Sfera sorpresa: pallina GIALLA.", "Torre di sassi: rosso, blu e in cima il GIALLO."]},
+   {"title": "Verde", "clips": ["LV001_C12", "LV001_C13", "LV001_C14"],
+    "summary": ["Palla VERDE dal razzo: Luna e Leo se la passano.", "Sfera sorpresa: pallina VERDE.", "Stellina fa piovere scintille VERDI che diventano tante palline verdi."]},
+   {"title": "Viola", "clips": ["LV001_C15", "LV001_C16", "LV001_C17"],
+    "summary": ["Palla VIOLA dal razzo: rimbalza fino a Leo.", "Sfera sorpresa: pallina VIOLA.", "Luna e Leo fanno rotolare la palla viola avanti e indietro."]},
+   {"title": "Arancione", "clips": ["LV001_C18", "LV001_C19", "LV001_C20"],
+    "summary": ["Palla ARANCIONE dal razzo: Luna la prende.", "Sfera sorpresa: pallina ARANCIONE.", "La palla arancione si nasconde tra le dune arancioni di Marte e Leo la ritrova."]},
+   {"title": "Tutti i colori", "clips": ["LV001_C21"],
+    "summary": ["Le sei palline fanno un arcobaleno dietro a Luna, Leo e Stellina, che ballano felici; il razzo saluta con le luci."]}
+  ]
+ }
+}

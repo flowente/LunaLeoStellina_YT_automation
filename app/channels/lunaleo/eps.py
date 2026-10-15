@@ -4,10 +4,17 @@
 CAM_FIXED = ("static locked-off camera: no camera movement, no zoom, no push-in. The very first frame already has the final "
              "framing described below and it never changes.")
 
-def HEADER(d, camera=None):
+def HEADER(d, camera=None, aspect="9:16"):
     cam = camera or CAM_FIXED
-    return (f"A {d}-second vertical 9:16 animated short for toddlers. ONE continuous take at the children's eye level, no cuts. "
+    kind = ("horizontal 16:9 animated clip, one scene of a longer toddler video" if aspect == "16:9"
+            else "vertical 9:16 animated short for toddlers")
+    return (f"A {d}-second {kind}. ONE continuous take at the children's eye level, no cuts. "
             f"CAMERA: {cam}")
+
+
+# Video lunghi (16:9): l'azione resta nel TERZO CENTRALE, così ogni clip si ritaglia anche in uno short verticale.
+CENTER_SAFE = ("CENTER-SAFE: all characters and all important action stay inside the CENTRAL THIRD of the frame width at all times; "
+               "the left and right thirds contain only the set (dunes, rocks, rocket or rover). ")
 
 FRAMING = ("FRAMING: medium-wide shot. The children are BIG in the frame: their full bodies fill about half of the frame height, "
            "feet at about 8% from the bottom edge, standing close together near the center. Only a thin strip of ground is visible "
@@ -40,7 +47,8 @@ REFS = {"luna": "characters/luna_sheet_CANON.png", "leo": "characters/leo_sheet_
         "stellina": "characters/stella_sheet_CANON.png",
         "color_balls": "props/color_balls_sheet.png", "surprise_spheres": "props/surprise_spheres_sheet.png",
         "stack_stones": "props/stack_stones_sheet.png", "color_craters": "props/color_craters_sheet.png",
-        "mars_A": "worlds/mars_A_CANON.png", "mars_B": "worlds/mars_B_CANON.png", "mars_C": "worlds/mars_C_CANON.png"}
+        "mars_A": "worlds/mars_A_CANON.png", "mars_B": "worlds/mars_B_CANON.png", "mars_C": "worlds/mars_C_CANON.png",
+        "mars_A_16x9": "worlds/mars_A_16x9.png", "mars_B_16x9": "worlds/mars_B_16x9.png", "mars_C_16x9": "worlds/mars_C_16x9.png"}
 
 # Regole di crescita (13/10/2026, da YouTube Analytics/assistente): aggancio immediato + loop perfetto
 HOOK_LOOP = ("HOOK: from the very first frame the characters are already visible and moving, with bright colors: no fade-in, no empty "
@@ -443,7 +451,9 @@ EPISODES = {
 
 def build(ep_id):
     E = EPISODES[ep_id]
-    order = E["cast"] + E.get("props", []) + [E["world"]]
+    wide = E.get("aspect") == "16:9"
+    world_ref = E["world"] + ("_16x9" if wide else "")
+    order = E["cast"] + E.get("props", []) + [world_ref]
     tag = {k: f"@Image{i+1}" for i, k in enumerate(order)}
     cast_lines = [CAST_HEAD] + [{"luna": LUNA, "leo": LEO, "stellina": STELLINA}[c].format(img=tag[c]) for c in E["cast"]]
     if E.get("props_text"):
@@ -452,14 +462,14 @@ def build(ep_id):
         cast_lines.append(t)
     framing = E.get("framing") or (FRAMING_SOLO.format(who=E["framing_solo"][0], obj=E["framing_solo"][1]) if "framing_solo" in E else FRAMING)
     sections = [
-        ("HEADER", HEADER(E["duration"], E.get("camera"))),
+        ("HEADER", HEADER(E["duration"], E.get("camera"), E.get("aspect", "9:16"))),
         ("FRAMING", framing),
         ("STYLE", STYLE),
         ("CAST", "\n".join(cast_lines)),
-        ("SET", "SET: " + SETS[E["world"]].format(img=tag[E["world"]])),
+        ("SET", "SET: " + SETS[E["world"]].format(img=tag[world_ref]) + (" The set is the wide 16:9 version of the same place." if wide else "")),
         ("ACTION", "ACTION (gentle, bouncy movements in time with the music):\n" + "\n".join(E["action"])),
-        ("RULES", E["rules"] + ("" if E.get("no_loop") else HOOK_LOOP) + COLOR_RULE + RULES_BASE),
+        ("RULES", E["rules"] + ("" if E.get("no_loop") else HOOK_LOOP) + (CENTER_SAFE if wide else "") + COLOR_RULE + RULES_BASE),
         ("AUDIO", E["audio"] + AUDIO_TAIL),
     ]
-    refs = [(tag[k], "mondo" if k == E["world"] else ("prop" if k in E.get("props", []) else "personaggio"), k, REFS[k]) for k in order]
+    refs = [(tag[k], "mondo" if k == world_ref else ("prop" if k in E.get("props", []) else "personaggio"), k, REFS[k]) for k in order]
     return E, sections, refs

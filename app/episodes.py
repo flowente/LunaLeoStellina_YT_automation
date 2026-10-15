@@ -53,7 +53,7 @@ def request_for(ep_id, draft=True):
     req = {"model": "bytedance/seedance-2-5", "input": {
         "prompt": prompt, "reference_image_urls": [SUPA_REFS + f for *_, f in refs],
         "reference_video_urls": None, "reference_audio_urls": None, "generate_audio": True,
-        "resolution": "480p" if draft else "1080p", "aspect_ratio": "9:16", "duration": E["duration"],
+        "resolution": "480p" if draft else "1080p", "aspect_ratio": E.get("aspect", "9:16"), "duration": E["duration"],
         "output_format": "mp4", "web_search": False, "draft": bool(draft), "nsfw_checker": True}}
     return E, req
 
