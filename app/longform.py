@@ -67,6 +67,7 @@ def batch_drafts(lv: str, budget: float, do_draft, state_fn, notify_text, log):
     for c in clips(L):
         s = clip_status(c, state_fn)
         if not s["defined"]: skipped.append(f"{c} (da scrivere)"); continue
+        if c.startswith("EP"): continue          # short già esistente riusato come clip: non si rigenera mai
         if s["drafts"] or s["final_take"] or s["pending"]: continue
         if spent + EST_DRAFT_USD > budget:
             notify_text(f"<b>{lv}</b> · tetto di ${budget:.0f} raggiunto dopo {len(done)} bozze (≈ ${spent:.2f}). "

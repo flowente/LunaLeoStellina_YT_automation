@@ -83,6 +83,14 @@ def lv_of(ep):
     return None
 
 
+def lv_buttons(lv):
+    """'Bozze mancanti' solo se c'è davvero qualcosa da generare (mai per le clip che sono short già fatti)."""
+    todo = [c for c in longform.clips(longform.get(lv))
+            if not c.startswith("EP") and longform.clip_status(c, state)["defined"] and not longform.clip_status(c, state)["drafts"]]
+    row = [{"text": f"Genera {len(todo)} bozze (tetto $30)", "callback_data": f"lv_drafts|{lv}|30"}] if todo else []
+    return [row + [{"text": "Monta", "callback_data": f"lv_mount|{lv}|0"}]]
+
+
 def do_long_drafts(lv, budget, log):
     return longform.batch_drafts(lv, budget, lambda c, log: do_draft(c, log), state, telegram.send, log)
 
@@ -611,8 +619,7 @@ async def telegram_webhook(request: Request, x_telegram_bot_api_secret_token: st
                     run_job("brainstorming", "IDEA", do_brainstorm, "IDEA",
                             f"Partiamo da questa idea: {it['titolo']}. {it['descrizione']} Dimmi come la renderesti più forte.")
         elif action == "lv_board":
-            telegram.send(longform.board(ep, state), [[{"text": "Bozze mancanti ($30)", "callback_data": f"lv_drafts|{ep}|30"},
-                                                     {"text": "Monta", "callback_data": f"lv_mount|{ep}|0"}]])
+            telegram.send(longform.board(ep, state), lv_buttons(ep))
         elif action == "lv_drafts":
             run_job("bozze lungo", ep, do_long_drafts, ep, float(take or 30))
         elif action == "lv_mount":
@@ -705,8 +712,7 @@ async def telegram_webhook(request: Request, x_telegram_bot_api_secret_token: st
                 lv = parts[2].upper(); longform.get(lv); run_job("montaggio", lv, do_montage, lv)
             else:
                 lv = parts[1].upper(); longform.get(lv)
-                telegram.send(longform.board(lv, state), [[{"text": "Bozze mancanti ($30)", "callback_data": f"lv_drafts|{lv}|30"},
-                                                           {"text": "Monta", "callback_data": f"lv_mount|{lv}|0"}]])
+                telegram.send(longform.board(lv, state), lv_buttons(lv))
         elif cmd == "/brainstorming":
             idea = text.split(maxsplit=1)[1] if len(parts) > 1 else ""
             brain_close(); brain_save({"history": [], "started": datetime.datetime.now().isoformat(timespec="seconds")})
