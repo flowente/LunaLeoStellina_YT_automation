@@ -49,6 +49,14 @@ def send_video(url, caption, buttons=None):
     return res
 
 
+def download_file(file_id, path):
+    info = call("getFile", file_id=file_id) or {}
+    fp = (info.get("result") or {}).get("file_path")
+    if not fp: raise RuntimeError("Telegram: file non scaricabile (max 20 MB)")
+    r = requests.get(f"https://api.telegram.org/file/bot{TOKEN}/{fp}", timeout=120); r.raise_for_status()
+    open(path, "wb").write(r.content); return path
+
+
 def send_photo(url, caption, buttons=None):
     p = {"chat_id": CHAT, "photo": url, "caption": caption[:1000], "parse_mode": "HTML"}
     if buttons: p["reply_markup"] = {"inline_keyboard": buttons}

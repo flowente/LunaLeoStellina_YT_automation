@@ -552,9 +552,13 @@ def sb_buttons(ep, n):
     return rows
 
 
-def do_storyboard(ep, log, only=None, note=""):
-    progress(ep, f"storyboard: ridisegno il pannello {only}" if only else "storyboard: disegno i pannelli (2-4 minuti)")
-    sb = storyboard.generate(ep, ep_dir(ep), state(ep), log, only=only, note=note)
+def do_storyboard(ep, log, only=None, note="", upload=None):
+    if upload:
+        progress(ep, "storyboard ricevuto: preparo la tavola con le informazioni")
+        sb = storyboard.from_upload(ep, ep_dir(ep), state(ep), upload, log)
+    else:
+        progress(ep, f"storyboard: ridisegno il pannello {only}" if only else "storyboard: disegno la tavola (1-3 minuti)")
+        sb = storyboard.generate(ep, ep_dir(ep), state(ep), log, only=only, note=note)
     st = state(ep); st["storyboard"] = sb; save_state(ep, st)
     n = len(sb["panels"]); E = episodes.all_episodes()[1][ep]
     cap = (f"<b>{ep}</b> · storyboard v{sb['version']}{f' (rifatto il pannello {only})' if only else ''} · {telegram.esc(E['title'])}\n"
@@ -718,6 +722,21 @@ async def telegram_webhook(request: Request, x_telegram_bot_api_secret_token: st
             prop_file(ep).unlink(missing_ok=True); telegram.send(f"Proposta {ep} annullata.")
         return {"ok": True}
     m = u.get("message") or {}; chat = str((m.get("chat") or {}).get("id", "")); text = (m.get("text") or "").strip()
+    img = (m.get("photo") or [None])[-1] or ((m.get("document") or {}) if str((m.get("document") or {}).get("mime_type", "")).startswith("image/") else None)
+    if img and chat == str(telegram.CHAT):
+        # storyboard fatto a mano (es. ChatGPT) mandato come foto o file con didascalia "/storyboard EP032"
+        cap = (m.get("caption") or "").split()
+        ep_ = cap[1].upper() if len(cap) > 1 and cap[0].lower().split("@")[0] == "/storyboard" else (cap[0].upper() if cap and re.fullmatch(r"(EP|LV)\w+", cap[0].upper()) else "")
+        if not ep_:
+            telegram.send("Per usare questa immagine come storyboard rimandala con la didascalia <code>/storyboard EP032</code>"); return {"ok": True}
+        try:
+            episodes.request_for(ep_)
+            f = ep_dir(ep_) / "storyboard" / f"upload_{img['file_id'][-12:]}.img"; f.parent.mkdir(parents=True, exist_ok=True)
+            telegram.download_file(img["file_id"], f)
+            run_job("storyboard", ep_, do_storyboard, ep_, upload=f)
+        except Exception as e:
+            telegram.send(f"⚠️ {telegram.esc(e)}")
+        return {"ok": True}
     if not text: return {"ok": True}
     if text.split()[0].lower().split("@")[0] in ("/id", "/start"):      # esatto: "/idee" non deve finire qui
         telegram.send(f"Il tuo chat id è <code>{chat}</code>", chat=chat); return {"ok": True}
