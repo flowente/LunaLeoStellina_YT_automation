@@ -428,6 +428,31 @@ EPISODES = {
   desc_en="Three giant marbles roll down the Mars dune and each one finds the crater of its color: red, blue and yellow! 🔴🔵🟡 ⭐",
   cover_s=9.0,
  ),
+ "EP034": dict(
+  title="Rincorriamo Stellina!", slug="rincorriamo_stellina", duration=15, cast=["luna", "leo", "stellina"], world="mars_B",
+  goal="Prova di movimento (16/10/2026): Luna e Leo si spostano davvero nell'inquadratura, a camera ferma. Tre corse dietro a Stellina: a sinistra, a destra, verso la camera. Poi tornano ai loro posti (loop). Format movimento/imitazione, nessun prop.",
+  framing=("FRAMING: wide medium shot, the SAME framing from the very first frame to the last (no zoom, no push-in), with plenty of open sand around the children so they have room to run. "
+           "At the start Luna stands on the LEFT of center and Leo on the RIGHT of center, side by side, their full bodies fill about one third of the frame height, feet at about 22% from the bottom edge. "
+           "STELLINA floats in the center at helmet height, between them."),
+  action=[
+   "0-1s: Luna and Leo already bounce on the spot with happy faces, looking at STELLINA, who wiggles in the center.",
+   "1-4s: STELLINA floats to the LEFT side of the frame; Luna and Leo run after her with short bouncy steps, Luna first and Leo right behind her, and they stop on the left side, still fully inside the frame, laughing.",
+   "4-7s: STELLINA zooms to the RIGHT side of the frame leaving a short sparkle trail; Luna and Leo turn and run after her across the sand to the right side, Luna first and Leo right behind her, and stop there, fully inside the frame.",
+   "7-10s: STELLINA floats down towards the camera into the lower center of the frame; Luna and Leo run towards the camera after her and get bigger, until their bodies fill about half of the frame height, then they stop and jump together with arms up while STELLINA glows brightly.",
+   "10-13s: STELLINA floats back up to the center at helmet height; Luna walks back to her starting spot on the LEFT of center and Leo to his starting spot on the RIGHT of center, slowing down as they arrive, and they turn to face the camera.",
+   "13-15s: Luna and Leo bounce on the spot side by side with happy faces, looking at STELLINA in the center, exactly as at the very beginning.",
+  ],
+  rules=("RULES: always exactly three characters: Luna, Leo and STELLINA, only ONE STELLINA; STELLINA never changes color and never has arms. The camera never moves: only the characters move. "
+         "Luna and Leo are ALWAYS fully visible inside the frame, never cut by the edges, never leaving the frame, never hidden. When they run, Luna is always first and Leo right behind her; they never swap identity, size, face or suit colors. "
+         "Every run is continuous: smooth acceleration and slowing down, one direction at a time, no teleporting, no sliding, no jumps in position; they slow down and stop before turning. "
+         "When they come towards the camera they get bigger smoothly and stay sharp; when they go back they get smaller smoothly. They end exactly on their starting spots. "),
+  audio="AUDIO: an original playful xylophone and pizzicato melody, 108 bpm, light and bouncy; soft quick footstep pats in the sand while they run, a little sparkly whoosh each time STELLINA moves, children's giggles, a happy 'boing' when they jump, a warm shimmer when STELLINA glows; the music ends on the same note and phrase it starts with, so the video loops seamlessly.",
+  title_it="Rincorriamo Stellina! ⭐ Corri a destra, a sinistra e… salta! | Cartoni per bambini #shorts",
+  title_en="Let's Chase Stella! ⭐ Run Left, Run Right and… Jump! | Cartoons for Toddlers #shorts",
+  desc_it="Stellina vola a sinistra, poi a destra, poi vicinissima: Luna e Leo la rincorrono su Marte! Corri anche tu con loro? ⭐",
+  desc_en="Stella flies left, then right, then super close: Luna and Leo chase her on Mars! Will you run with them too? ⭐",
+  cover_s=9.0,
+ ),
  "EP025": dict(
   title="Ciao, sono Stellina!", slug="ciao_sono_stellina", duration=12, cast=["luna", "leo", "stellina"], world="mars_B",
   goal="Presentazione di Stellina (formato 'Ciao!'): i suoi tre poteri — luce che respira, scia di scintille, giravolta — poi arrivano Luna e Leo.",
