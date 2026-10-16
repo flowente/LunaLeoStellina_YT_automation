@@ -40,18 +40,26 @@ def define(ep_id, spec: dict):
     data[ep_id] = spec; f.write_text(json.dumps(data, ensure_ascii=False, indent=1), encoding="utf-8")
 
 
-def request_for(ep_id, draft=True):
+def request_for(ep_id, draft=True, storyboard=None):
+    """storyboard = {"strip_url": ..., "panels": [...]} approvato: entra come ultima immagine di riferimento."""
     m, eps = all_episodes()
     if ep_id not in eps: raise KeyError(f"Episodio {ep_id} non definito")
     m.EPISODES[ep_id] = eps[ep_id]
     E, sections, refs = m.build(ep_id)
+    ref_urls = [SUPA_REFS + f for *_, f in refs]
+    if storyboard and storyboard.get("strip_url"):
+        from .storyboard import seedance_block
+        tag = f"@Image{len(refs) + 1}"
+        sections.insert(next(i for i, (k, _) in enumerate(sections) if k == "ACTION"),
+                        ("STORYBOARD", seedance_block(tag, len(storyboard["panels"]), shots(E))))
+        ref_urls.append(storyboard["strip_url"]); refs = refs + [(tag, "storyboard", "storyboard", storyboard["strip_url"])]
     prompt = "\n\n".join(t for _, t in sections)
     n_img = len(set(re.findall(r"@Image(\d+)", prompt)))
     if n_img != len(refs): raise ValueError(f"Il prompt usa {n_img} @Image ma ci sono {len(refs)} riferimenti")
     last = max(int(x) for x in re.findall(r"-(\d+)s:", prompt))
     if last != E["duration"]: raise ValueError(f"Le azioni arrivano a {last}s ma duration = {E['duration']}")
     req = {"model": "bytedance/seedance-2-5", "input": {
-        "prompt": prompt, "reference_image_urls": [SUPA_REFS + f for *_, f in refs],
+        "prompt": prompt, "reference_image_urls": ref_urls,
         "reference_video_urls": None, "reference_audio_urls": None, "generate_audio": True,
         "resolution": "480p" if draft else "1080p", "aspect_ratio": E.get("aspect", "9:16"), "duration": E["duration"],
         "output_format": "mp4", "web_search": False, "draft": bool(draft), "nsfw_checker": True}}

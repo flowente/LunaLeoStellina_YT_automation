@@ -33,7 +33,7 @@ def wait(task, timeout_s=30 * 60, log=print):
         if d.get("state") == "success":
             return json.loads(d["resultJson"])["resultUrls"][0], d
         if d.get("state") == "fail":
-            raise RuntimeError(f"Seedance fallito: {d.get('failCode')} {d.get('failMsg')} (nessun credito addebitato)")
+            raise RuntimeError(f"Kie fallito: {d.get('failCode')} {d.get('failMsg')} (nessun credito addebitato)")
         if time.time() - t0 > timeout_s:
             raise TimeoutError(f"Task {task} ancora in corso")
 

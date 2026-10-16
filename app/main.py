@@ -7,12 +7,12 @@ Flusso (n8n fa da regia e ti chiede l'ok):
   4. POST /episodes/{ep}/cleanup   -> cancella i file temporanei da Supabase dopo la pubblicazione
 Ogni chiamata richiede l'header  X-Token: <SERVICE_TOKEN>.
 """
-import json, os, threading, traceback, uuid, datetime
+import json, os, re, threading, traceback, uuid, datetime
 from pathlib import Path
 import requests
 from fastapi import FastAPI, Header, HTTPException, Body, Request
 from fastapi.responses import FileResponse, PlainTextResponse
-from . import config, episodes, kie, postprod, qc, judge, storage, buffer, costs, telegram, writer, upscale, longform
+from . import config, episodes, kie, postprod, qc, judge, storage, buffer, costs, telegram, writer, upscale, longform, storyboard
 
 app = FastAPI(title="Luna Leo & Stellina — automazione short")
 JOBS: dict = {}
@@ -157,8 +157,16 @@ def kie_generate(ep, take, req, stem: Path, tipo, log, kind="draft", task=None):
 
 
 # ------------------------------------------------------------------ fasi
+def approved_storyboard(ep):
+    sb = state(ep).get("storyboard") or {}
+    return sb if sb.get("approved") and not sb.get("obsolete") else None
+
+
 def do_draft(ep, log, resume=None):
-    E, req = episodes.request_for(ep, draft=True)
+    sb = approved_storyboard(ep)
+    E, req = episodes.request_for(ep, draft=True, storyboard=sb)
+    if not resume:
+        progress(ep, f"bozza con storyboard v{sb['version']} approvato" if sb else "bozza senza storyboard (nessuno approvato)")
     if not resume:
         st0 = state(ep); st0.pop("aborted", None); save_state(ep, st0)
     s = state(ep); take = resume["take"] if resume else len(s["takes"]) + 1
@@ -181,7 +189,8 @@ def do_draft(ep, log, resume=None):
     except Exception as e:
         log(f"giudice non eseguito: {e}")
     preview = storage.upload(final, f"{config.SUPABASE_VIDEO_PREFIX}/{config.CHANNEL}/{ep}/{final.name}") if config.SUPABASE_KEY else None
-    s["takes"][str(take)] = {"draft_task": task, "raw": raw.name, "final": final.name, "qc": rep, "verdict": verdict, "preview_url": preview}
+    s["takes"][str(take)] = {"draft_task": task, "raw": raw.name, "final": final.name, "qc": rep, "verdict": verdict, "preview_url": preview,
+                             "storyboard_version": sb["version"] if sb else None}
     save_state(ep, s)
     out = {"episode": ep, "take": take, "preview_url": preview, "verdict": verdict, "measures": {"esito": rep["esito"], "global": rep["global_issues"]}}
     notify("draft_ready", out)
@@ -510,8 +519,9 @@ def do_propose(ep, idea, log, feedback=""):
     f = episodes.extra_file(); d = json.loads(f.read_text(encoding="utf-8")); d.pop(ep + "_check", None); f.write_text(json.dumps(d, ensure_ascii=False, indent=1), encoding="utf-8")
     telegram.send(f"<b>{ep}</b> · proposta: <b>{telegram.esc(spec['title'])}</b> ({spec['duration']}s, {spec['world']})\n"
                   f"{telegram.esc(summary)}\n\nTitolo: {telegram.esc(spec['title_it'])}",
-                  [[{"text": "Ok, fai la bozza", "callback_data": f"nuovo_ok|{ep}|0"},
-                    {"text": "Rifai idea", "callback_data": f"nuovo_rifai|{ep}|0"},
+                  [[{"text": "Ok, fai lo storyboard", "callback_data": f"nuovo_sb|{ep}|0"},
+                    {"text": "Ok, bozza diretta", "callback_data": f"nuovo_ok|{ep}|0"}],
+                   [{"text": "Rifai idea", "callback_data": f"nuovo_rifai|{ep}|0"},
                     {"text": "Annulla", "callback_data": f"nuovo_no|{ep}|0"}]])
     return {"episode": ep, "title": spec["title"]}
 
@@ -526,10 +536,53 @@ def do_revise(ep, change, log):
     f = episodes.extra_file(); d = json.loads(f.read_text(encoding="utf-8")); d.pop(ep + "_check", None); f.write_text(json.dumps(d, ensure_ascii=False, indent=1), encoding="utf-8")
     prop_file(ep).write_text(json.dumps({"idea": change, "spec": new, "revision": True}, ensure_ascii=False, indent=1), encoding="utf-8")
     telegram.send(f"<b>{ep}</b> · modifica proposta:\n{telegram.esc(summary)}",
-                  [[{"text": "Ok, rifai la bozza", "callback_data": f"nuovo_ok|{ep}|0"},
-                    {"text": "Salva senza bozza", "callback_data": f"mod_save|{ep}|0"}],
+                  [[{"text": "Ok, rifai lo storyboard", "callback_data": f"nuovo_sb|{ep}|0"},
+                    {"text": "Ok, rifai la bozza", "callback_data": f"nuovo_ok|{ep}|0"}],
+                   [{"text": "Salva senza bozza", "callback_data": f"mod_save|{ep}|0"}],
                    [{"text": "Annulla modifica", "callback_data": f"nuovo_no|{ep}|0"}]])
     return {"episode": ep}
+
+
+# ------------------------------------------------------------------ storyboard
+def sb_buttons(ep, n):
+    rows = [[{"text": "✅ Approva e fai la bozza", "callback_data": f"sb_okdraft|{ep}|0"},
+             {"text": "✅ Approva", "callback_data": f"sb_ok|{ep}|0"}],
+            [{"text": f"Rifai {i}", "callback_data": f"sb_panel|{ep}|{i}"} for i in range(1, n + 1)][:6],
+            [{"text": "Rifai tutto", "callback_data": f"sb_redo|{ep}|0"}]]
+    return rows
+
+
+def do_storyboard(ep, log, only=None, note=""):
+    progress(ep, f"storyboard: ridisegno il pannello {only}" if only else "storyboard: disegno i pannelli (2-4 minuti)")
+    sb = storyboard.generate(ep, ep_dir(ep), state(ep), log, only=only, note=note)
+    st = state(ep); st["storyboard"] = sb; save_state(ep, st)
+    n = len(sb["panels"]); E = episodes.all_episodes()[1][ep]
+    cap = (f"<b>{ep}</b> · storyboard v{sb['version']}{f' (rifatto il pannello {only})' if only else ''} · {telegram.esc(E['title'])}\n"
+           f"{n} pannelli · {E['duration']} s · {E.get('aspect', '9:16')}" + (f" · ≈ ${sb['cost_usd']:.2f}" if sb.get("cost_usd") else "") +
+           f'\n<a href="{sb["sheet_url"]}">Tavola in alta risoluzione</a>\n\n'
+           f"Per correggere un pannello: <code>/storyboard {ep} 3 la correzione</code>")
+    telegram.send_photo(sb["sheet_url"], cap, sb_buttons(ep, n))
+    return {"episode": ep, "version": sb["version"], "sheet_url": sb["sheet_url"]}
+
+
+def do_long_storyboards(lv, log):
+    todo = [c for c in longform.clips(longform.get(lv)) if not c.startswith("EP") and not approved_storyboard(c)]
+    for c in todo:
+        try: do_storyboard(c, log)
+        except Exception as e: telegram.send(f"⚠️ <b>{c}</b> · storyboard non riuscito: {telegram.esc(e)}")
+    return {"lv": lv, "clips": todo}
+
+
+def sb_approve(ep):
+    st = state(ep); sb = st.get("storyboard")
+    if not sb: raise RuntimeError(f"{ep}: nessuno storyboard da approvare")
+    sb.update(approved=True, obsolete=False, approved_at=datetime.datetime.now().isoformat(timespec="seconds")); save_state(ep, st)
+    return sb
+
+
+def sb_obsolete(ep):
+    st = state(ep)
+    if st.get("storyboard"): st["storyboard"]["obsolete"] = True; save_state(ep, st)
 
 
 # ------------------------------------------------------------------ Telegram
@@ -555,7 +608,7 @@ def _tg_startup():
                  "Railway → servizio → tasto destro / ⋮ → Attach Volume → mount path /data")
     lines.append("Riprendo: " + ", ".join(resumed) if resumed else "Nessun lavoro in corso.")
     if lost: lines.append("Interrotte dal riavvio, da rilanciare: " + ", ".join(lost) + " (usa /bozza).")
-    lines.append("Comandi: /episodi · /nuovo idea · /idee · /brainstorming · /lungo · /modifica EP0xx correzione · /bozza EP0xx · /upscale EP0xx · /annulla EP0xx · /stato EP0xx · /programma EP0xx 20/10 17:30 · /costi")
+    lines.append("Comandi: /episodi · /nuovo idea · /idee · /brainstorming · /lungo · /modifica EP0xx correzione · /storyboard EP0xx · /bozza EP0xx · /upscale EP0xx · /annulla EP0xx · /stato EP0xx · /programma EP0xx 20/10 17:30 · /costi")
     try:
         if telegram.enabled(): threading.Thread(target=telegram.send, args=("\n".join(lines),), daemon=True).start()
     except Exception as e:
@@ -640,13 +693,23 @@ async def telegram_webhook(request: Request, x_telegram_bot_api_secret_token: st
                 notify("final_ready", {"episode": ep, "take": take, "final_url": t["final_url"], "cover_url": t["cover_url"],
                                        "file_name": t["final_1080"], "provider": "fal", **episodes.texts(ep)})   # Telegram + copia su Drive (n8n)
         elif action == "abort": abort(ep)
-        elif action == "nuovo_ok":
+        elif action in ("nuovo_ok", "nuovo_sb"):
             pr = json.loads(prop_file(ep).read_text(encoding="utf-8")); sp = dict(pr["spec"]); sp.pop("riassunto_it", None)
-            episodes.define(ep, sp); prop_file(ep).unlink(missing_ok=True)
-            run_job("draft", ep, do_draft, ep)
+            episodes.define(ep, sp); prop_file(ep).unlink(missing_ok=True); sb_obsolete(ep)    # l'episodio è cambiato
+            if action == "nuovo_sb": run_job("storyboard", ep, do_storyboard, ep)
+            else: run_job("draft", ep, do_draft, ep)
+        elif action in ("sb_ok", "sb_okdraft"):
+            sb = sb_approve(ep)
+            telegram.send(f"<b>{ep}</b> · storyboard v{sb['version']} approvato ✅" +
+                          ("" if action == "sb_okdraft" else f". Le prossime bozze lo useranno: /bozza {ep}"))
+            if action == "sb_okdraft": run_job("draft", ep, do_draft, ep)
+        elif action == "sb_redo":
+            run_job("storyboard", ep, do_storyboard, ep)
+        elif action == "sb_panel":
+            run_job("storyboard", ep, do_storyboard, ep, only=take)
         elif action == "mod_save":
             pr = json.loads(prop_file(ep).read_text(encoding="utf-8")); sp = dict(pr["spec"]); sp.pop("riassunto_it", None)
-            episodes.define(ep, sp); prop_file(ep).unlink(missing_ok=True)
+            episodes.define(ep, sp); prop_file(ep).unlink(missing_ok=True); sb_obsolete(ep)
             telegram.send(f"<b>{ep}</b> · modifica salvata. Lancia la bozza quando vuoi con /bozza {ep}")
         elif action == "nuovo_rifai":
             pr = json.loads(prop_file(ep).read_text(encoding="utf-8"))
@@ -666,6 +729,7 @@ async def telegram_webhook(request: Request, x_telegram_bot_api_secret_token: st
         return {"ok": True}
     parts = text.split(); cmd = parts[0].lower().split("@")[0]; arg = parts[1].upper() if len(parts) > 1 else ""
     needs_ep = {"/bozza": "/bozza EP027", "/upscale": "/upscale EP028  (oppure /upscale EP028 2 per la take 2)",
+                "/storyboard": "/storyboard EP032  (correzione: /storyboard EP032 3 Leo più vicino a Luna)",
                 "/stato": "/stato EP027", "/annulla": "/annulla EP027", "/modifica": "/modifica EP027 correzione",
                 "/programma": "/programma EP027 20/10 17:30  oppure  /programma EP027 coda"}
     if cmd in needs_ep and not arg:
@@ -676,12 +740,25 @@ async def telegram_webhook(request: Request, x_telegram_bot_api_secret_token: st
     try:
         if cmd == "/bozza" and arg:
             episodes.request_for(arg); run_job("draft", arg, do_draft, arg)
+        elif cmd == "/storyboard" and arg:
+            # /storyboard EP032 · /storyboard EP032 3 nota · /storyboard EP032 nota per tutti · /storyboard LV001 (tutte le clip)
+            rest = text.split(maxsplit=2)[2] if len(parts) > 2 else ""
+            if re.fullmatch(r"LV\d+", arg):
+                longform.get(arg); telegram.send(f"<b>{arg}</b> · storyboard delle clip senza storyboard approvato, una alla volta")
+                run_job("storyboard lungo", arg, do_long_storyboards, arg)
+            else:
+                episodes.request_for(arg)
+                m_ = re.match(r"(\d+)\s*(.*)", rest, re.S)
+                if m_: run_job("storyboard", arg, do_storyboard, arg, only=int(m_[1]), note=m_[2].strip())
+                else: run_job("storyboard", arg, do_storyboard, arg, note=rest.strip())
         elif cmd == "/upscale" and arg:
             # /upscale EP028   (ultima take)   oppure   /upscale EP028 2
             start_upscale(arg, int(parts[2]) if len(parts) > 2 and parts[2].isdigit() else None)
         elif cmd == "/stato" and arg:
-            st = state(arg)
-            telegram.send(f"<b>{arg}</b>: {len(st['takes'])} take\n" + "\n".join(
+            st = state(arg); sbs = st.get("storyboard")
+            sbl = (f"Storyboard v{sbs['version']}: " + ("obsoleto (episodio modificato)" if sbs.get("obsolete") else "approvato ✅" if sbs.get("approved") else "da approvare")
+                   + "\n") if sbs else "Storyboard: nessuno\n"
+            telegram.send(f"<b>{arg}</b>: {len(st['takes'])} take\n" + sbl + "\n".join(
                 f"take {k}: {(v.get('verdict') or {}).get('verdetto', '-')}{' · finale pronto' if v.get('final_url') else ''}"
                 f"{' (upscale fal)' if v.get('final_provider') == 'fal' else ''}"
                 f"{' · prova upscale' if v.get('upscale') and v.get('final_provider') != 'fal' else ''}"
@@ -755,7 +832,7 @@ async def telegram_webhook(request: Request, x_telegram_bot_api_secret_token: st
         elif cmd == "/costi":
             telegram.send(costs.report(arg or None))
         else:
-            telegram.send("Comandi:\n/episodi — elenco episodi\n/nuovo idea — propone un episodio nuovo\n/idee tema — 5 idee pronte, ispirate agli episodi esistenti\n/brainstorming idea — ragioniamo insieme su un'idea abbozzata (chiudi con /fine)\n/bozza EP027 — genera la bozza\n/upscale EP027 — prova l'upscale fal della bozza (take: /upscale EP027 2)\n/annulla EP027 — esce dalla produzione dell'episodio\n/modifica EP027 correzione — corregge l'episodio e rifà la bozza\n/stato EP027 — stato\n/programma EP026 20/10 17:30 — programma su Buffer (ora italiana)\n/programma EP026 coda — mette in coda Buffer\n/lungo — video lunghi (/lungo LV001, /lungo bozze LV001 30, /lungo monta LV001)\n/costi — spese della settimana per episodio (/costi EP028 per il dettaglio)\n/id — chat id")
+            telegram.send("Comandi:\n/episodi — elenco episodi\n/nuovo idea — propone un episodio nuovo\n/idee tema — 5 idee pronte, ispirate agli episodi esistenti\n/brainstorming idea — ragioniamo insieme su un'idea abbozzata (chiudi con /fine)\n/storyboard EP032 — storyboard in matita da approvare (pannello: /storyboard EP032 3 correzione)\n/bozza EP027 — genera la bozza (con lo storyboard approvato, se c'è)\n/upscale EP027 — prova l'upscale fal della bozza (take: /upscale EP027 2)\n/annulla EP027 — esce dalla produzione dell'episodio\n/modifica EP027 correzione — corregge l'episodio e rifà la bozza\n/stato EP027 — stato\n/programma EP026 20/10 17:30 — programma su Buffer (ora italiana)\n/programma EP026 coda — mette in coda Buffer\n/lungo — video lunghi (/lungo LV001, /lungo bozze LV001 30, /lungo monta LV001)\n/costi — spese della settimana per episodio (/costi EP028 per il dettaglio)\n/id — chat id")
     except Exception as e:
         telegram.send(f"⚠️ {telegram.esc(e)}")
     return {"ok": True}

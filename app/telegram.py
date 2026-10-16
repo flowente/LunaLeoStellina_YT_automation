@@ -4,7 +4,8 @@ Comandi (solo dalla chat TELEGRAM_CHAT_ID):
   /nuovo idea      propone un episodio nuovo (OpenAI) con pulsanti Ok/Rifai/Annulla
   /idee tema       5 idee pronte (titolo + descrizione) con pulsanti ✅ scrivi / 💬 ragioniamoci
   /brainstorming idea   conversazione su un'idea abbozzata -> titolo e descrizione da confermare (/fine chiude)
-  /bozza EP027      genera la bozza (con controllo)
+  /storyboard EP032 storyboard in matita (un pannello per shot) da approvare; /storyboard EP032 3 nota rifà il pannello 3
+  /bozza EP027      genera la bozza (con controllo); usa lo storyboard approvato se c'è
   /upscale EP027    prova l'upscale fal della bozza (1080p a ≈ $0,55), con pulsante "Usa come finale"
   /annulla EP027    esce dalla produzione dell'episodio
   /modifica EP027 correzione   riscrive l'episodio con la correzione (pulsanti Ok/Salva/Annulla)
@@ -48,9 +49,18 @@ def send_video(url, caption, buttons=None):
     return res
 
 
+def send_photo(url, caption, buttons=None):
+    p = {"chat_id": CHAT, "photo": url, "caption": caption[:1000], "parse_mode": "HTML"}
+    if buttons: p["reply_markup"] = {"inline_keyboard": buttons}
+    res = call("sendPhoto", **p)
+    if not res or not res.get("ok"):
+        send(caption + f'\n\n<a href="{url}">Apri lo storyboard</a>', buttons)
+    return res
+
+
 COMMANDS = [("episodi", "Elenco episodi"), ("nuovo", "Propone un episodio nuovo: /nuovo idea"), ("idee", "Idee pronte: /idee oppure /idee colori"),
             ("brainstorming", "Ragioniamo su un'idea: /brainstorming idea"), ("fine", "Chiude il brainstorming"), ("lungo", "Video lunghi: /lungo LV001"),
-            ("bozza", "Genera la bozza: /bozza EP027"), ("upscale", "Prova l'upscale fal: /upscale EP027"),
+            ("storyboard", "Storyboard da approvare: /storyboard EP032"), ("bozza", "Genera la bozza: /bozza EP027"), ("upscale", "Prova l'upscale fal: /upscale EP027"),
             ("modifica", "Corregge un episodio: /modifica EP027 correzione"), ("stato", "Stato: /stato EP027"),
             ("programma", "Buffer: /programma EP027 20/10 17:30 oppure coda"), ("annulla", "Esce dalla produzione: /annulla EP027"),
             ("costi", "Spese per settimana ed episodio"), ("id", "Mostra il chat id")]
