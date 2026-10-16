@@ -570,11 +570,19 @@ def do_storyboard(ep, log, only=None, note="", upload=None):
 
 
 def do_long_storyboards(lv, log):
-    todo = [c for c in longform.clips(longform.get(lv)) if not c.startswith("EP") and not approved_storyboard(c)]
+    """Una tavola per clip, una alla volta. Saltate: gli short riusati (EP…), le clip già approvate e quelle non ancora scritte."""
+    _, eps = episodes.all_episodes(); cl = longform.clips(longform.get(lv))
+    missing = [c for c in cl if not c.startswith("EP") and c not in eps]
+    todo = [c for c in cl if not c.startswith("EP") and c in eps and not approved_storyboard(c)]
+    if not todo:
+        telegram.send(f"<b>{lv}</b> · nessuna clip da disegnare" + (f": prima vanno scritte {', '.join(missing)}" if missing else " (tutte approvate)."))
+        return {"lv": lv, "clips": [], "missing": missing}
+    telegram.send(f"<b>{lv}</b> · storyboard di {len(todo)} clip, una alla volta (≈ ${len(todo) * storyboard.OPENAI_IMAGE_COST:.0f})"
+                  + (f"\nDa scrivere prima: {', '.join(missing)}" if missing else ""))
     for c in todo:
         try: do_storyboard(c, log)
         except Exception as e: telegram.send(f"⚠️ <b>{c}</b> · storyboard non riuscito: {telegram.esc(e)}")
-    return {"lv": lv, "clips": todo}
+    return {"lv": lv, "clips": todo, "missing": missing}
 
 
 def sb_approve(ep):
@@ -763,8 +771,7 @@ async def telegram_webhook(request: Request, x_telegram_bot_api_secret_token: st
             # /storyboard EP032 · /storyboard EP032 3 nota · /storyboard EP032 nota per tutti · /storyboard LV001 (tutte le clip)
             rest = text.split(maxsplit=2)[2] if len(parts) > 2 else ""
             if re.fullmatch(r"LV\d+", arg):
-                longform.get(arg); telegram.send(f"<b>{arg}</b> · storyboard delle clip senza storyboard approvato, una alla volta")
-                run_job("storyboard lungo", arg, do_long_storyboards, arg)
+                longform.get(arg); run_job("storyboard lungo", arg, do_long_storyboards, arg)
             else:
                 episodes.request_for(arg)
                 m_ = re.match(r"(\d+)\s*(.*)", rest, re.S)
